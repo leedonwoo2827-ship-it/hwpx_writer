@@ -2,6 +2,13 @@
 chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
+:: 에러 발생 시에도 창이 닫히지 않도록 트랩 설정
+if "%~1" neq "__inner__" (
+    cmd /c ""%~f0" __inner__"
+    pause
+    exit /b
+)
+
 echo ============================================================
 echo   HWPX Writer MCP - 설치 스크립트
 echo ============================================================
@@ -29,18 +36,31 @@ if %errorlevel% neq 0 (
 )
 
 :: 버전 확인 (3.10 이상 필요)
+set "PY_VER="
 for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set "PY_VER=%%v"
+
+if not defined PY_VER (
+    echo [경고] Python 버전을 확인할 수 없습니다.
+    echo        Windows Store 앱 관리에서 "앱 실행 별칭"의 python.exe를 끄세요.
+    echo.
+    goto :install_python
+)
+
 echo [정보] Python %PY_VER% 감지됨
 echo.
 
 :: 메이저.마이너 추출
+set "PY_MAJOR="
+set "PY_MINOR="
 for /f "tokens=1,2 delims=." %%a in ("%PY_VER%") do (
     set "PY_MAJOR=%%a"
     set "PY_MINOR=%%b"
 )
 
-if %PY_MAJOR% lss 3 goto :install_python
-if %PY_MAJOR%==3 if %PY_MINOR% lss 10 goto :install_python
+if not defined PY_MAJOR goto :install_python
+if not defined PY_MINOR goto :install_python
+if !PY_MAJOR! lss 3 goto :install_python
+if !PY_MAJOR!==3 if !PY_MINOR! lss 10 goto :install_python
 
 goto :python_ok
 
@@ -154,4 +174,3 @@ echo ------- 여기까지 -------
 echo.
 echo 설정 후 Claude Desktop을 재시작하면 사용할 수 있습니다.
 echo.
-pause
