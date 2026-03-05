@@ -62,7 +62,7 @@ class HWPXGenerator:
 
         # CharPr / ParaPr ID 카운터 (0번은 기본용으로 예약)
         self._charpr_list = []   # (id, height, textColor, fontId)
-        self._parapr_list = []   # (id, leftMargin, spaceBefore, spaceAfter, align)
+        self._parapr_list = []   # (id, leftMargin, spaceBefore, spaceAfter, align, indent)
         self._next_charpr_id = 1
         self._next_parapr_id = 1
         self._charpr_cache = {}  # (height, textColor, fontId) -> id
@@ -114,13 +114,14 @@ class HWPXGenerator:
     # ParaPr 관리
     # ------------------------------------------------------------------
     def _get_parapr_id(self, left_margin: int = 0, space_before: int = 0,
-                       space_after: int = 0, align: str = "JUSTIFY") -> int:
-        key = (left_margin, space_before, space_after, align)
+                       space_after: int = 0, align: str = "JUSTIFY",
+                       indent: int = 0) -> int:
+        key = (left_margin, space_before, space_after, align, indent)
         if key in self._parapr_cache:
             return self._parapr_cache[key]
         pid = self._next_parapr_id
         self._next_parapr_id += 1
-        self._parapr_list.append((pid, left_margin, space_before, space_after, align))
+        self._parapr_list.append((pid, left_margin, space_before, space_after, align, indent))
         self._parapr_cache[key] = pid
         return pid
 
@@ -213,7 +214,7 @@ class HWPXGenerator:
             f'</hh:charPr>'
         )
 
-    def _build_parapr_xml(self, pid, left_margin, space_before, space_after, align) -> str:
+    def _build_parapr_xml(self, pid, left_margin, space_before, space_after, align, indent=0) -> str:
         return (
             f'<hh:paraPr id="{pid}" tabPrIDRef="0" condense="0"'
             f' fontLineHeight="0" snapToGrid="1"'
@@ -226,7 +227,7 @@ class HWPXGenerator:
             f' lineWrap="BREAK"/>'
             f'<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'
             f'<hh:margin>'
-            f'<hc:intent value="0" unit="HWPUNIT"/>'
+            f'<hc:intent value="{indent}" unit="HWPUNIT"/>'
             f'<hc:left value="{left_margin}" unit="HWPUNIT"/>'
             f'<hc:right value="0" unit="HWPUNIT"/>'
             f'<hc:prev value="{space_before}" unit="HWPUNIT"/>'
@@ -297,8 +298,8 @@ class HWPXGenerator:
         # ParaPr: id=0 (기본) + 동적 생성분
         parapr_default = self._build_parapr_xml(0, 0, 0, 0, "JUSTIFY")
         paraprs = parapr_default
-        for pid, lm, sb, sa, align in self._parapr_list:
-            paraprs += self._build_parapr_xml(pid, lm, sb, sa, align)
+        for pid, lm, sb, sa, align, indent in self._parapr_list:
+            paraprs += self._build_parapr_xml(pid, lm, sb, sa, align, indent)
         parapr_cnt = 1 + len(self._parapr_list)
 
         borderfills = self._build_borderfills_xml()
@@ -385,14 +386,19 @@ class HWPXGenerator:
     def _text_paragraph(self, text: str, level: int, font_name: str,
                         font_size_pt: float, left_margin_pt: float = 0,
                         space_before_pt: float = 0, space_after_pt: float = 0,
-                        align: str = "JUSTIFY") -> str:
+                        align: str = "JUSTIFY",
+                        hanging_indent_pt: float = 0) -> str:
         """마커 색상을 지원하는 텍스트 paragraph 생성"""
         height = self._pt_to_height(font_size_pt)
+        # 내어쓰기: left_margin을 늘리고 indent를 음수로 설정
+        actual_left = self._pt_to_hwpunit(left_margin_pt + hanging_indent_pt)
+        indent_val = -self._pt_to_hwpunit(hanging_indent_pt) if hanging_indent_pt else 0
         parapr_id = self._get_parapr_id(
-            self._pt_to_hwpunit(left_margin_pt),
+            actual_left,
             self._pt_to_hwpunit(space_before_pt),
             self._pt_to_hwpunit(space_after_pt),
             align,
+            indent_val,
         )
 
         segments = self._parse_markers(text)
@@ -627,6 +633,7 @@ class HWPXGenerator:
                             style.get("paragraphSpaceBefore", 0),
                             style.get("paragraphSpaceAfter", 3),
                             style.get("align", "justify").upper(),
+                            style.get("hangingIndent", 0),
                         )
                         _log(f"[Added] Level {level}: {text[:50]}...")
 
