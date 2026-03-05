@@ -38,7 +38,7 @@
       "leftMargin": 0
     },
     "level3": {
-      "symbol": "",
+      "symbol": "□",
       "font": "KoPubWorld바탕체 Medium",
       "size": 11,
       "paragraphSpaceBefore": 5,
@@ -47,13 +47,31 @@
       "leftMargin": 0
     },
     "level4": {
-      "symbol": "",
+      "symbol": "○",
       "font": "KoPubWorld바탕체 Light",
       "size": 10,
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
       "leftMargin": 10
+    },
+    "level5": {
+      "symbol": "―",
+      "font": "KoPubWorld바탕체 Light",
+      "size": 10,
+      "paragraphSpaceBefore": 2,
+      "paragraphSpaceAfter": 2,
+      "align": "justify",
+      "leftMargin": 20
+    },
+    "level6": {
+      "symbol": "※",
+      "font": "KoPubWorld바탕체 Light",
+      "size": 10,
+      "paragraphSpaceBefore": 2,
+      "paragraphSpaceAfter": 2,
+      "align": "justify",
+      "leftMargin": 20
     },
     "table": {
       "font": "KoPubWorld돋움체 Medium",
