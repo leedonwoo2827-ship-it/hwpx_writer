@@ -614,8 +614,12 @@ class HWPXGenerator:
                         level_key = f"level{level}"
                         style = self.style_config.get(level_key, {})
 
+                        # 기호(symbol) 적용: JSON에 정의된 기호를 텍스트 앞에 붙인다
+                        symbol = style.get("symbol", "")
+                        display_text = f"{symbol} {text}" if symbol else text
+
                         body_paragraphs += self._text_paragraph(
-                            text,
+                            display_text,
                             level,
                             style.get("font", "함초롬돋움"),
                             style.get("size", 11),
