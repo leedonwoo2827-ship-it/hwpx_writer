@@ -34,7 +34,7 @@
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 0
+      "leftMargin": 8
     },
     "level3": {
       "symbol": "□",
@@ -43,7 +43,7 @@
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 0,
+      "leftMargin": 8,
       "hangingIndent": 16
     },
     "level4": {
@@ -53,7 +53,7 @@
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 10,
+      "leftMargin": 8,
       "hangingIndent": 16
     },
     "level5": {
@@ -63,7 +63,7 @@
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 20,
+      "leftMargin": 8,
       "hangingIndent": 16
     },
     "level6": {
@@ -73,7 +73,7 @@
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 20,
+      "leftMargin": 8,
       "hangingIndent": 16
     },
     "table": {
