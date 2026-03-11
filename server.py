@@ -40,6 +40,29 @@ def _build_generator(styles_path: Path) -> HWPXGenerator:
     return HWPXGenerator(base_dir=str(BASE_DIR), styles_path=str(styles_path))
 
 
+def _resolve_project_output(project_dir: str, output_file: str, fallback_name: str = "output.hwpx") -> Path:
+    """project_dir 또는 output_file에서 출력 경로를 결정합니다."""
+    if project_dir:
+        proj = Path(project_dir)
+        out_dir = proj / "output"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        name = Path(output_file).name if output_file else fallback_name
+        return out_dir / name
+    if output_file:
+        p = Path(output_file)
+        return p if p.is_absolute() else Path.home() / "Documents" / output_file
+    return Path.home() / "Documents" / fallback_name
+
+
+def _inject_images(data: dict, image_paths_str: str) -> None:
+    """이미지 경로 목록을 data의 content 끝에 image 항목으로 추가합니다."""
+    if not image_paths_str:
+        return
+    paths = [p.strip() for p in image_paths_str.split(",") if p.strip()]
+    for p in paths:
+        data["content"].append({"type": "image", "path": p})
+
+
 def _run_generator(generator: HWPXGenerator, data: dict, output_path: Path) -> None:
     generator.generate(data, str(output_path))
 
@@ -64,9 +87,11 @@ def _read_md_file(md_path: Path) -> str:
 @mcp.tool()
 def convert_text_to_hwpx(
     text_content: str,
-    output_file: str,
+    output_file: str = "",
     title: str = "",
-    styles_file: str = ""
+    styles_file: str = "",
+    project_dir: str = "",
+    image_paths: str = ""
 ) -> str:
     """Claude가 작성한 마크다운 텍스트를 HWPX 한글 문서 파일로 저장합니다.
 
@@ -78,28 +103,30 @@ def convert_text_to_hwpx(
 
     Args:
         text_content: 변환할 마크다운 형식 텍스트
-        output_file: 저장할 HWPX 파일 경로 (예: C:/Users/홍길동/Documents/보고서.hwpx)
+        output_file: 저장할 HWPX 파일명 (project_dir 지정 시 파일명만 필요)
         title: 문서 제목 (생략 시 첫 번째 # 헤딩 사용)
         styles_file: 스타일 파일 경로 (생략 시 proposal-styles.json)
+        project_dir: 프로젝트 폴더 경로 (예: C:/Users/ubion/Documents/proposals/260311-n). 지정 시 output/ 하위에 저장
+        image_paths: 삽입할 이미지 절대경로 목록 (쉼표 구분, 예: "C:/.../a.png,C:/.../b.png"). 문서 끝에 순서대로 삽입
 
     Returns:
         저장된 파일 경로 및 크기
     """
-    out_path = Path(output_file)
-    if not out_path.is_absolute():
-        out_path = Path.home() / "Documents" / output_file
-
+    out_path = _resolve_project_output(project_dir, output_file, "output.hwpx")
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         data = parse_markdown_to_json(text_content, title=title)
+        _inject_images(data, image_paths)
         styles_path = _resolve_styles_path(styles_file)
         generator = _build_generator(styles_path)
         _run_generator(generator, data, out_path)
 
         if out_path.exists():
             size = out_path.stat().st_size
-            return f"저장 완료!\n경로: {out_path}\n크기: {size:,} bytes"
+            img_count = len([p for p in image_paths.split(",") if p.strip()]) if image_paths else 0
+            img_msg = f"\n이미지: {img_count}개 삽입" if img_count else ""
+            return f"저장 완료!\n경로: {out_path}\n크기: {size:,} bytes{img_msg}"
         return f"오류: 파일 생성에 실패했습니다: {out_path}"
 
     except Exception as e:
@@ -111,15 +138,19 @@ def convert_md_to_hwpx(
     md_file: str,
     output_file: str = "",
     title: str = "",
-    styles_file: str = ""
+    styles_file: str = "",
+    project_dir: str = "",
+    image_paths: str = ""
 ) -> str:
     """마크다운(.md) 파일을 읽어 HWPX 한글 문서로 변환합니다.
 
     Args:
         md_file: 변환할 마크다운 파일 경로 (예: C:/Users/홍길동/Documents/보고서.md)
-        output_file: 저장할 HWPX 파일 경로 (생략 시 md 파일과 같은 위치에 .hwpx 확장자로 저장)
+        output_file: 저장할 HWPX 파일명 (project_dir 지정 시 파일명만 필요, 생략 시 md 파일명.hwpx)
         title: 문서 제목 (생략 시 첫 번째 # 헤딩 사용)
         styles_file: 스타일 파일 경로 (생략 시 proposal-styles.json)
+        project_dir: 프로젝트 폴더 경로 (예: C:/Users/ubion/Documents/proposals/260311-n). 지정 시 output/ 하위에 저장
+        image_paths: 삽입할 이미지 절대경로 목록 (쉼표 구분). 문서 끝에 순서대로 삽입
 
     Returns:
         저장된 파일 경로 및 크기
@@ -136,24 +167,30 @@ def convert_md_to_hwpx(
     except Exception as e:
         return f"오류: 파일을 읽을 수 없습니다: {type(e).__name__}: {e}"
 
-    if not output_file:
-        out_path = md_path.with_suffix(".hwpx")
-    else:
+    fallback_name = md_path.with_suffix(".hwpx").name
+    if project_dir:
+        out_path = _resolve_project_output(project_dir, output_file, fallback_name)
+    elif output_file:
         out_path = Path(output_file)
         if not out_path.is_absolute():
             out_path = Path.home() / "Documents" / output_file
+    else:
+        out_path = md_path.with_suffix(".hwpx")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         data = parse_markdown_to_json(text_content, title=title)
+        _inject_images(data, image_paths)
         styles_path = _resolve_styles_path(styles_file)
         generator = _build_generator(styles_path)
         _run_generator(generator, data, out_path)
 
         if out_path.exists():
             size = out_path.stat().st_size
-            return f"저장 완료!\n원본: {md_path}\n경로: {out_path}\n크기: {size:,} bytes"
+            img_count = len([p for p in image_paths.split(",") if p.strip()]) if image_paths else 0
+            img_msg = f"\n이미지: {img_count}개 삽입" if img_count else ""
+            return f"저장 완료!\n원본: {md_path}\n경로: {out_path}\n크기: {size:,} bytes{img_msg}"
         return f"오류: 파일 생성에 실패했습니다: {out_path}"
 
     except Exception as e:

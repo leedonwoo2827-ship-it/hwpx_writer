@@ -16,6 +16,7 @@ XML을 문자열로 직접 생성한다.
 import json
 import os
 import re
+import struct
 import sys
 import zipfile
 from pathlib import Path
@@ -71,6 +72,10 @@ class HWPXGenerator:
         # 폰트 매핑: font_name -> id (0번은 기본 폰트)
         self._fonts = []         # [(id, face)] — 순서대로
         self._font_cache = {}    # face -> id
+
+        # 이미지(BinData) 관리
+        self._images = []        # [(bin_id, abs_path, zip_name, fmt)]
+        self._next_bin_id = 1
 
     # ------------------------------------------------------------------
     # 폰트 관리
@@ -145,6 +150,100 @@ class HWPXGenerator:
     def _pt_to_hwpunit(pt: float) -> int:
         """포인트를 HWPUNIT로 변환 (1pt ≈ 100 HWPUNIT)"""
         return int(pt * 100)
+
+    # ------------------------------------------------------------------
+    # 이미지 관리
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _read_image_size(path: str) -> tuple:
+        """PNG/JPEG 파일에서 (width, height) 픽셀을 읽는다. PIL 불필요."""
+        with open(path, "rb") as f:
+            header = f.read(32)
+            # PNG: 시그니처 8바이트 후 IHDR 청크에 w/h
+            if header[:8] == b'\x89PNG\r\n\x1a\n':
+                w, h = struct.unpack('>II', header[16:24])
+                return (w, h)
+            # JPEG: SOI 마커 후 프레임 찾기
+            if header[:2] == b'\xff\xd8':
+                f.seek(0)
+                f.read(2)  # SOI
+                while True:
+                    marker, = struct.unpack('>H', f.read(2))
+                    if marker == 0xFFD9 or marker == 0xFFDA:
+                        break
+                    length, = struct.unpack('>H', f.read(2))
+                    if marker in (0xFFC0, 0xFFC2):
+                        f.read(1)  # precision
+                        h, w = struct.unpack('>HH', f.read(4))
+                        return (w, h)
+                    f.read(length - 2)
+        # 기본값 (읽기 실패 시)
+        return (800, 600)
+
+    def _register_image(self, image_path: str) -> int:
+        """이미지 파일 등록 → BinData ID 반환"""
+        bid = self._next_bin_id
+        self._next_bin_id += 1
+        abs_path = os.path.abspath(image_path)
+        ext = Path(abs_path).suffix.lower()
+        fmt = "PNG" if ext == ".png" else "JPEG" if ext in (".jpg", ".jpeg") else "PNG"
+        zip_name = f"BinData/image{bid}{ext}"
+        self._images.append((bid, abs_path, zip_name, fmt))
+        return bid
+
+    def _build_bindatalist_xml(self) -> str:
+        """header.xml 용 binDataList XML 생성"""
+        if not self._images:
+            return ""
+        items = ""
+        for bid, _, zip_name, fmt in self._images:
+            items += (
+                f'<hh:binData id="{bid}" compression="COMPRESS" state="INDIRECT"'
+                f' type="EMBED" binDataPath="{zip_name}"'
+                f' originalFormat="{fmt}"/>'
+            )
+        return f'<hh:binDataList itemCnt="{len(self._images)}">{items}</hh:binDataList>'
+
+    def _image_paragraph_xml(self, bin_id: int, width_px: int, height_px: int,
+                              max_width_hwpunit: int = 48190) -> str:
+        """이미지를 담는 paragraph XML 생성.
+        이미지 크기를 본문 폭에 맞춰 자동 조정 (px → HWPUNIT: 1px ≈ 59.5 HWPUNIT at 96dpi)
+        """
+        # px → HWPUNIT (A4 기준 약 59.5 HWPUNIT/px at 96dpi)
+        PX_TO_HU = 59.5
+        w_hu = int(width_px * PX_TO_HU)
+        h_hu = int(height_px * PX_TO_HU)
+
+        # 본문 폭 초과 시 비율 축소
+        if w_hu > max_width_hwpunit:
+            ratio = max_width_hwpunit / w_hu
+            w_hu = max_width_hwpunit
+            h_hu = int(h_hu * ratio)
+
+        return (
+            f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0"'
+            f' pageBreak="0" columnBreak="0" merged="0">'
+            f'<hp:run charPrIDRef="0">'
+            f'<hp:pic id="0" zOrder="0" numberingType="FIGURE"'
+            f' textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES"'
+            f' lock="0" dropcapstyle="None">'
+            f'<hp:sz width="{w_hu}" height="{h_hu}"'
+            f' widthRelTo="ABSOLUTE" heightRelTo="ABSOLUTE" protect="0"/>'
+            f'<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1"'
+            f' allowOverlap="0" holdAnchorAndSO="0"'
+            f' vertRelTo="PARA" horzRelTo="COLUMN"'
+            f' vertAlign="TOP" horzAlign="CENTER"'
+            f' vertOffset="0" horzOffset="0"/>'
+            f'<hp:outMargin left="0" right="0" top="141" bottom="141"/>'
+            f'<hp:inMargin left="0" right="0" top="0" bottom="0"/>'
+            f'<hp:imgRect x="0" y="0" w="{w_hu}" h="{h_hu}"/>'
+            f'<hp:imgClip left="0" top="0" right="0" bottom="0"/>'
+            f'<hp:imageData binDataIDRef="{bin_id}"/>'
+            f'</hp:pic>'
+            f'<hp:t></hp:t>'
+            f'</hp:run>'
+            f'</hp:p>'
+        )
 
     # ------------------------------------------------------------------
     # 색상
@@ -236,7 +335,7 @@ class HWPXGenerator:
             f' lineWrap="BREAK"/>'
             f'<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'
             f'<hh:margin>'
-            f'<hc:intent value="{indent}" unit="HWPUNIT"/>'
+            f'<hc:indent value="{indent}" unit="HWPUNIT"/>'
             f'<hc:left value="{left_margin}" unit="HWPUNIT"/>'
             f'<hc:right value="0" unit="HWPUNIT"/>'
             f'<hc:prev value="{space_before}" unit="HWPUNIT"/>'
@@ -312,6 +411,7 @@ class HWPXGenerator:
         parapr_cnt = 1 + len(self._parapr_list)
 
         borderfills = self._build_borderfills_xml()
+        bindatalist = self._build_bindatalist_xml()
 
         return (
             f'<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
@@ -322,6 +422,7 @@ class HWPXGenerator:
             f'{borderfills}'
             f'<hh:charProperties itemCnt="{charpr_cnt}">{charprs}</hh:charProperties>'
             f'<hh:paraProperties itemCnt="{parapr_cnt}">{paraprs}</hh:paraProperties>'
+            f'{bindatalist}'
             f'</hh:refList>'
             f'</hh:head>'
         )
@@ -623,6 +724,15 @@ class HWPXGenerator:
                     if sub_type == "table":
                         body_paragraphs += self._table_paragraph_xml(sub)
                         _log(f"[Added] Table: rows={len(sub.get('rows', []))}")
+                    elif sub_type == "image":
+                        img_path = sub.get("path", "")
+                        if img_path and os.path.isfile(img_path):
+                            bid = self._register_image(img_path)
+                            w_px, h_px = self._read_image_size(img_path)
+                            body_paragraphs += self._image_paragraph_xml(bid, w_px, h_px)
+                            _log(f"[Added] Image: {img_path} ({w_px}x{h_px}px)")
+                        else:
+                            _log(f"[Warning] Image not found: {img_path}")
                     elif sub_type == "subtitle":
                         # 소제목 (5.2.1 형태의 중간 제목)
                         sub_style = self.style_config.get("section_subtitle", {})
@@ -670,6 +780,16 @@ class HWPXGenerator:
 
             elif item_type == "table":
                 body_paragraphs += self._table_paragraph_xml(item)
+
+            elif item_type == "image":
+                img_path = item.get("path", "")
+                if img_path and os.path.isfile(img_path):
+                    bid = self._register_image(img_path)
+                    w_px, h_px = self._read_image_size(img_path)
+                    body_paragraphs += self._image_paragraph_xml(bid, w_px, h_px)
+                    _log(f"[Added] Image: {img_path} ({w_px}x{h_px}px)")
+                else:
+                    _log(f"[Warning] Image not found: {img_path}")
 
         # 마지막 빈 문단 (한글 오피스 호환)
         body_paragraphs += self._paragraph_xml(
@@ -755,6 +875,15 @@ class HWPXGenerator:
             '</ha:HWPApplicationSetting>'
         )
 
+        # BinData manifest 항목
+        bindata_manifest = ""
+        for bid, _, zip_name, fmt in self._images:
+            media = "image/png" if fmt == "PNG" else "image/jpeg"
+            bindata_manifest += (
+                f'<opf:item id="bindata{bid}" href="{zip_name}"'
+                f' media-type="{media}"/>'
+            )
+
         content_hpf = (
             f'<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
             f'<opf:package {_ALL_NS}'
@@ -767,6 +896,7 @@ class HWPXGenerator:
             f'<opf:item id="header" href="Contents/header.xml" media-type="application/xml"/>'
             f'<opf:item id="section0" href="Contents/section0.xml" media-type="application/xml"/>'
             f'<opf:item id="settings" href="settings.xml" media-type="application/xml"/>'
+            f'{bindata_manifest}'
             f'</opf:manifest>'
             f'<opf:spine>'
             f'<opf:itemref idref="header" linear="yes"/>'
@@ -795,6 +925,12 @@ class HWPXGenerator:
             _write("Contents/content.hpf", content_hpf)
             _write("Contents/header.xml", header_xml)
             _write("Contents/section0.xml", section_xml)
+
+            # 이미지 파일을 ZIP에 추가
+            for bid, abs_path, zip_name, fmt in self._images:
+                with open(abs_path, "rb") as img_f:
+                    zf.writestr(zip_name, img_f.read(),
+                                compress_type=zipfile.ZIP_DEFLATED)
 
 
 if __name__ == "__main__":
