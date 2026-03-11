@@ -4,13 +4,20 @@
 
 마크다운 텍스트를 hwpx_generator.py가 소비하는 JSON 구조로 변환합니다.
 
-헤딩 매핑:
-  #  (H1) → metadata.title (첫 번째) 또는 level1 항목
-  ## (H2) → 새 섹션 (type: "section")
-  ### (H3) → level 1 항목
-  #### (H4) → level 2 항목
-  ##### (H5) → level 3 항목
-  ###### (H6) → level 4 항목
+헤딩 매핑 (제목체: 1 → 1.1 → 1.1.1 계층):
+  #  (H1) → metadata.title (첫 번째) 또는 섹션 제목 (level1, 18pt Bold)
+  ## (H2) → 새 섹션 (type: "section", level1 스타일)
+  ### (H3) → 소제목 (type: "subtitle", section_subtitle 스타일)
+  #### (H4) → □ 본문 항목 (level 3)
+  ##### (H5) → ○ 세부 항목 (level 4)
+  ###### (H6) → ― 보충 항목 (level 5)
+
+본문 기호 계층: □ → ○ → ― → ※
+  level 2: (기호 없음) 일반 본문 텍스트
+  level 3: □  (leftMargin 16pt)
+  level 4: ○  (leftMargin 28pt)
+  level 5: ―  (leftMargin 38pt)
+  level 6: ※  (leftMargin 38pt)
 
 색상 마커 (인라인):
   {{red:텍스트}}, {{green:텍스트}}, {{blue:텍스트}},
@@ -64,9 +71,19 @@ def parse_markdown_to_json(
         # 헤딩 파싱 (가장 긴 prefix부터 확인)
         # ----------------------------------------------------------------
 
-        # H6 (###### )
+        # H6 (###### ) → level 5 (― 보충 항목)
         if stripped.startswith("###### "):
             text = stripped[7:].strip()
+            if current_section is None:
+                current_section = _new_section("")
+                content.append(current_section)
+            current_section["items"].append(_item(5, text))
+            i += 1
+            continue
+
+        # H5 (##### ) → level 4 (○ 세부 항목)
+        if stripped.startswith("##### "):
+            text = stripped[6:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
@@ -74,9 +91,9 @@ def parse_markdown_to_json(
             i += 1
             continue
 
-        # H5 (##### )
-        if stripped.startswith("##### "):
-            text = stripped[6:].strip()
+        # H4 (#### ) → level 3 (□ 본문 항목)
+        if stripped.startswith("#### "):
+            text = stripped[5:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
@@ -84,23 +101,16 @@ def parse_markdown_to_json(
             i += 1
             continue
 
-        # H4 (#### )
-        if stripped.startswith("#### "):
-            text = stripped[5:].strip()
-            if current_section is None:
-                current_section = _new_section("")
-                content.append(current_section)
-            current_section["items"].append(_item(2, text))
-            i += 1
-            continue
-
-        # H3 (### )
+        # H3 (### ) → 소제목 (subtitle)
         if stripped.startswith("### "):
             text = stripped[4:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            current_section["items"].append(_item(1, text))
+            current_section["items"].append({
+                "type": "subtitle",
+                "text": _strip_bold(text),
+            })
             i += 1
             continue
 
@@ -142,12 +152,18 @@ def parse_markdown_to_json(
 
         # ----------------------------------------------------------------
         # 목록 아이템 (- / * / + / 숫자.)
+        # 들여쓰기 깊이에 따라: 0 → □(level3), 1~4 → ○(level4), 5+ → ―(level5)
         # ----------------------------------------------------------------
         list_match = re.match(r"^(\s*)([-*+]|\d+\.)\s+(.+)", stripped)
         if list_match:
             indent_len = len(line) - len(line.lstrip())
             text = list_match.group(3).strip()
-            level = 3 if indent_len == 0 else 4
+            if indent_len == 0:
+                level = 3   # □
+            elif indent_len <= 4:
+                level = 4   # ○
+            else:
+                level = 5   # ―
 
             if current_section is None:
                 current_section = _new_section("")
@@ -171,7 +187,7 @@ def parse_markdown_to_json(
             continue
 
         # ----------------------------------------------------------------
-        # 일반 단락 텍스트
+        # 일반 단락 텍스트 → level 2 (기호 없음, 일반 본문)
         # ----------------------------------------------------------------
         if stripped and not stripped.startswith("#"):
             if current_section is None:
@@ -180,7 +196,7 @@ def parse_markdown_to_json(
             clean = _strip_bold(stripped)
             color = _detect_marker_color(clean)
             current_section["items"].append({
-                "level": 3,
+                "level": 2,
                 "text": clean,
                 "color": color,
             })

@@ -35,7 +35,7 @@
       "paragraphSpaceBefore": 15,
       "paragraphSpaceAfter": 6,
       "align": "justify",
-      "leftMargin": 0
+      "leftMargin": 8
     },
     "level2": {
       "symbol": "",
@@ -44,7 +44,7 @@
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 8
+      "leftMargin": 16
     },
     "level3": {
       "symbol": "□",
@@ -53,8 +53,8 @@
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 8,
-      "hangingIndent": 16
+      "leftMargin": 16,
+      "hangingIndent": 12
     },
     "level4": {
       "symbol": "○",
@@ -63,8 +63,8 @@
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 8,
-      "hangingIndent": 16
+      "leftMargin": 28,
+      "hangingIndent": 10
     },
     "level5": {
       "symbol": "―",
@@ -73,8 +73,8 @@
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 8,
-      "hangingIndent": 16
+      "leftMargin": 38,
+      "hangingIndent": 10
     },
     "level6": {
       "symbol": "※",
@@ -83,8 +83,8 @@
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 8,
-      "hangingIndent": 16
+      "leftMargin": 38,
+      "hangingIndent": 10
     },
     "table": {
       "font": "KoPubWorld돋움체 Medium",

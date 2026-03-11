@@ -926,10 +926,12 @@ class HWPXGenerator:
             _write("Contents/header.xml", header_xml)
             _write("Contents/section0.xml", section_xml)
 
-            # 이미지 파일을 ZIP에 추가
+            # 이미지 파일을 ZIP에 추가 (Contents/ 하위에 저장)
+            # header.xml의 binDataPath는 Contents/ 기준 상대경로(BinData/image1.png)
+            # ZIP 내 실제 위치는 Contents/BinData/image1.png
             for bid, abs_path, zip_name, fmt in self._images:
                 with open(abs_path, "rb") as img_f:
-                    zf.writestr(zip_name, img_f.read(),
+                    zf.writestr(f"Contents/{zip_name}", img_f.read(),
                                 compress_type=zipfile.ZIP_DEFLATED)
 
 
