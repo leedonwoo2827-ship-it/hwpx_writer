@@ -81,13 +81,14 @@ def parse_markdown_to_json(
             i += 1
             continue
 
-        # H5 (##### ) → level 4 (○ 세부 항목)
+        # H5 (##### ) → level 4 (○) 또는 level 5 (― 로 시작하면)
         if stripped.startswith("##### "):
             text = stripped[6:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            current_section["items"].append(_item(4, text))
+            level = 5 if text.startswith("―") else 4
+            current_section["items"].append(_item(level, text))
             i += 1
             continue
 
@@ -180,6 +181,22 @@ def parse_markdown_to_json(
             continue
 
         # ----------------------------------------------------------------
+        # 인라인 이미지 ![alt](path)
+        # ----------------------------------------------------------------
+        img_match = re.match(r'^!\[([^\]]*)\]\(([^)]+)\)', stripped)
+        if img_match:
+            img_path = img_match.group(2).strip()
+            if current_section is None:
+                current_section = _new_section("")
+                content.append(current_section)
+            current_section["items"].append({
+                "type": "image",
+                "path": img_path,
+            })
+            i += 1
+            continue
+
+        # ----------------------------------------------------------------
         # 빈 줄
         # ----------------------------------------------------------------
         if not stripped:
@@ -217,8 +234,8 @@ def _new_section(title: str) -> dict:
 
 
 def _strip_bold(text: str) -> str:
-    """**bold** 마커를 제거하고 내부 텍스트만 반환합니다."""
-    return re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    """**bold** 마커를 {{bold:...}} 인라인 마커로 변환합니다."""
+    return re.sub(r'\*\*(.+?)\*\*', r'{{bold:\1}}', text)
 
 
 def _item(level: int, text: str, color: str = "") -> dict:

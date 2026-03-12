@@ -25,7 +25,7 @@
       "paragraphSpaceBefore": 25,
       "paragraphSpaceAfter": 8,
       "align": "justify",
-      "leftMargin": 0
+      "leftMargin": -15
     },
     "section_subtitle": {
       "symbol": "",
@@ -35,7 +35,7 @@
       "paragraphSpaceBefore": 15,
       "paragraphSpaceAfter": 6,
       "align": "justify",
-      "leftMargin": 8
+      "leftMargin": -15
     },
     "level2": {
       "symbol": "",
@@ -44,7 +44,7 @@
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 16
+      "leftMargin": 4
     },
     "level3": {
       "symbol": "□",
@@ -53,8 +53,8 @@
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 16,
-      "hangingIndent": 12
+      "leftMargin": 3,
+      "hangingIndent": 16
     },
     "level4": {
       "symbol": "○",
@@ -63,17 +63,17 @@
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 28,
+      "leftMargin": 4,
       "hangingIndent": 10
     },
     "level5": {
       "symbol": "―",
-      "font": "KoPubWorld바탕체 Light",
-      "size": 10,
+      "font": "KoPubWorld돋움체 Medium",
+      "size": 11,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 38,
+      "leftMargin": -11,
       "hangingIndent": 10
     },
     "level6": {
