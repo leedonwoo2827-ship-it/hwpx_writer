@@ -58,12 +58,12 @@
     },
     "level4": {
       "symbol": "○",
-      "font": "KoPubWorld바탕체 Light",
+      "font": "KoPubWorld돋움체 Medium",
       "size": 10,
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 4,
+      "leftMargin": -12,
       "hangingIndent": 10
     },
     "level5": {
@@ -85,6 +85,17 @@
       "align": "justify",
       "leftMargin": 38,
       "hangingIndent": 10
+    },
+    "bullet": {
+      "symbol": "●",
+      "font": "KoPubWorld돋움체 Medium",
+      "size": 13,
+      "bold": false,
+      "paragraphSpaceBefore": 15,
+      "paragraphSpaceAfter": 6,
+      "align": "justify",
+      "leftMargin": -15,
+      "hangingIndent": 0
     },
     "table": {
       "font": "KoPubWorld돋움체 Medium",

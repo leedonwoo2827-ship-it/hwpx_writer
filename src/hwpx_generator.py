@@ -622,8 +622,8 @@ class HWPXGenerator:
         table_height = self._pt_to_height(table_size)
         table_charpr = self._get_charpr_id(table_height, "#000000", table_font)
 
-        # A4 본문 폭 기준 (좌우 여백 제외): 59528 - 5669*2 = 48190
-        total_width = 48190
+        # A4 본문 폭 기준 (좌우 여백 제외, 약간의 여유 포함)
+        total_width = 47600
         cell_width = total_width // col_count
 
         # 헤더 행
@@ -774,7 +774,6 @@ class HWPXGenerator:
                         else:
                             _log(f"[Warning] Image not found: {img_path}")
                     elif sub_type == "subtitle":
-                        # 소제목 (5.2.1 형태의 중간 제목)
                         sub_style = self.style_config.get("section_subtitle", {})
                         sub_font = sub_style.get("font", "함초롬돋움")
                         sub_size = sub_style.get("size", 13)
@@ -805,24 +804,23 @@ class HWPXGenerator:
                         else:
                             display_text = f"{symbol} {text}" if symbol else text
 
-                        # ● 제목은 leftMargin -15, 내어쓰기 없음으로 오버라이드
+                        # ● 항목은 bullet 스타일 적용
                         if text and text.startswith('●'):
-                            override_left = -15
-                            override_indent = 0
+                            bullet_style = self.style_config.get("bullet", {})
+                            use_style = bullet_style
                         else:
-                            override_left = style.get("leftMargin", 0)
-                            override_indent = style.get("hangingIndent", 0)
+                            use_style = style
 
                         body_paragraphs += self._text_paragraph(
                             display_text,
                             level,
-                            style.get("font", "함초롬돋움"),
-                            style.get("size", 11),
-                            override_left,
-                            style.get("paragraphSpaceBefore", 0),
-                            style.get("paragraphSpaceAfter", 3),
-                            style.get("align", "justify").upper(),
-                            override_indent,
+                            use_style.get("font", "함초롬돋움"),
+                            use_style.get("size", 11),
+                            use_style.get("leftMargin", 0),
+                            use_style.get("paragraphSpaceBefore", 0),
+                            use_style.get("paragraphSpaceAfter", 3),
+                            use_style.get("align", "justify").upper(),
+                            use_style.get("hangingIndent", 0),
                         )
                         _log(f"[Added] Level {level}: {text[:50]}...")
 
