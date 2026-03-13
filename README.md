@@ -94,12 +94,13 @@ Claude Desktop에서 자연어로 요청하면 됩니다.
 
 | 마크다운 | 기호 | 한글 문서 | 기본 스타일 |
 |---------|------|----------|-----------|
-| `# 제목` | (없음) | **제목체** (섹션 구분) | KoPubWorld돋움체 Bold, 18pt |
-| `## 본문` | (없음) | 일반 본문 | KoPubWorld바탕체 Medium, 11pt |
-| `### 본문` | □ | 본문 항목 | KoPubWorld바탕체 Medium, 11pt |
-| `#### 본문` | ○ | 세부 항목 | KoPubWorld돋움체 Medium, 10pt |
-| `##### 본문` | ― | 보충 항목 | KoPubWorld돋움체 Medium, 11pt |
-| `###### 본문` | ※ | 참고/주석 | KoPubWorld바탕체 Light, 10pt |
+| `# 제목` | (없음) | **제목체** (섹션 구분) | KoPubWorld돋움체 Bold, 22pt |
+| `# 섹션` | (없음) | **섹션 제목** (1., 1.1 등) | KoPubWorld돋움체 Bold, 16pt |
+| `## 본문` | (없음) | 일반 본문 | KoPubWorld바탕체 Medium, 15pt |
+| `### 본문` | □ | 본문 항목 (1칸 들여쓰기) | KoPubWorld바탕체 Medium, 15pt |
+| `#### 본문` | ○ | 세부 항목 (2칸 들여쓰기) | KoPubWorld바탕체 Medium, 15pt |
+| `##### 본문` | ― | 보충 항목 (3칸 들여쓰기) | KoPubWorld바탕체 Medium, 15pt |
+| `###### 본문` | ※ | 참고/주석 | KoPubWorld돋움체 Medium, 13pt |
 | `- 항목` | □ | 목록 (들여쓰기로 레벨 결정) | — |
 | `\| 표 \|` | — | 표 | KoPubWorld돋움체 Medium, 10pt |
 
@@ -114,9 +115,9 @@ Claude Desktop에서 자연어로 요청하면 됩니다.
   "styles": {
     "level1": {
       "font": "KoPubWorld돋움체 Bold",
-      "size": 18,
-      "paragraphSpaceBefore": 25,
-      "paragraphSpaceAfter": 8,
+      "size": 16,
+      "paragraphSpaceBefore": 20,
+      "paragraphSpaceAfter": 6,
       "leftMargin": 0
     }
   },

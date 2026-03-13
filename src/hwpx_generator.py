@@ -60,6 +60,7 @@ class HWPXGenerator:
             styles_data = json.load(f)
             self.style_config = styles_data["styles"]
             self.colors = styles_data.get("colors", {})
+            self.line_spacing = styles_data.get("lineSpacing", 160)
 
         # CharPr / ParaPr ID 카운터 (0번은 기본용으로 예약)
         self._charpr_list = []   # (id, height, textColor, fontId)
@@ -99,7 +100,7 @@ class HWPXGenerator:
     def _collect_fonts_from_styles(self):
         """스타일에서 사용하는 폰트를 모두 등록"""
         # 기본 폰트 (id=0)
-        default_fonts = ["함초롬돋움", "함초롬바탕"]
+        default_fonts = ["KoPubWorld바탕체 Medium", "KoPubWorld돋움체 Medium"]
         for f in default_fonts:
             self._register_font(f)
 
@@ -212,7 +213,7 @@ class HWPXGenerator:
         return ""
 
     def _image_paragraph_xml(self, bin_id: int, width_px: int, height_px: int,
-                              max_width_hwpunit: int = 42520) -> str:
+                              max_width_hwpunit: int = 47600) -> str:
         """이미지를 담는 paragraph XML 생성 (한글 오피스 호환 구조).
         실제 한글 오피스가 생성하는 HWPX 구조를 그대로 복제.
         """
@@ -379,7 +380,7 @@ class HWPXGenerator:
             f'<hc:prev value="{space_before}" unit="HWPUNIT"/>'
             f'<hc:next value="{space_after}" unit="HWPUNIT"/>'
             f'</hh:margin>'
-            f'<hh:lineSpacing type="PERCENT" value="160" unit="HWPUNIT"/>'
+            f'<hh:lineSpacing type="PERCENT" value="{self.line_spacing}" unit="HWPUNIT"/>'
             f'<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0"'
             f' offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'
             f'</hh:paraPr>'
@@ -576,7 +577,7 @@ class HWPXGenerator:
             if seg_color:
                 color_hex = self._resolve_color(seg_color)
                 table_style = self.style_config.get("table", {})
-                font = table_style.get("font", "함초롬돋움")
+                font = table_style.get("font", "KoPubWorld바탕체 Medium")
                 size = table_style.get("size", 10)
                 cid = self._get_charpr_id(self._pt_to_height(size), color_hex, font)
             else:
@@ -617,7 +618,7 @@ class HWPXGenerator:
 
         # 표 글자 스타일
         table_style = self.style_config.get("table", {})
-        table_font = table_style.get("font", "함초롬돋움")
+        table_font = table_style.get("font", "KoPubWorld바탕체 Medium")
         table_size = table_style.get("size", 10)
         table_height = self._pt_to_height(table_size)
         table_charpr = self._get_charpr_id(table_height, "#000000", table_font)
@@ -706,7 +707,7 @@ class HWPXGenerator:
         include_title = metadata.get("include_title", False)
         if include_title and title:
             title_style = self.style_config.get("title", {})
-            title_font = title_style.get("font", "함초롬돋움")
+            title_font = title_style.get("font", "KoPubWorld바탕체 Medium")
             title_size = title_style.get("size", 25)
             title_align = title_style.get("align", "center").upper()
             if title_align == "CENTER":
@@ -744,7 +745,7 @@ class HWPXGenerator:
                 section_title = item.get("title")
                 if include_section_titles and section_title:
                     sec_style = self.style_config.get("level1", {})
-                    sec_font = sec_style.get("font", "함초롬돋움")
+                    sec_font = sec_style.get("font", "KoPubWorld바탕체 Medium")
                     sec_size = sec_style.get("size", 18)
                     sec_height = self._pt_to_height(sec_size)
                     sec_charpr = self._get_charpr_id(sec_height, "#000000", sec_font)
@@ -775,7 +776,7 @@ class HWPXGenerator:
                             _log(f"[Warning] Image not found: {img_path}")
                     elif sub_type == "subtitle":
                         sub_style = self.style_config.get("section_subtitle", {})
-                        sub_font = sub_style.get("font", "함초롬돋움")
+                        sub_font = sub_style.get("font", "KoPubWorld바탕체 Medium")
                         sub_size = sub_style.get("size", 13)
                         sub_charpr = self._get_charpr_id(
                             self._pt_to_height(sub_size), "#000000", sub_font
@@ -814,7 +815,7 @@ class HWPXGenerator:
                         body_paragraphs += self._text_paragraph(
                             display_text,
                             level,
-                            use_style.get("font", "함초롬돋움"),
+                            use_style.get("font", "KoPubWorld바탕체 Medium"),
                             use_style.get("size", 11),
                             use_style.get("leftMargin", 0),
                             use_style.get("paragraphSpaceBefore", 0),

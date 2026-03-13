@@ -2,13 +2,13 @@
   "styles": {
     "title": {
       "font": "KoPubWorld돋움체 Bold",
-      "size": 28,
+      "size": 22,
       "bold": true,
       "align": "center"
     },
     "organization": {
       "font": "KoPubWorld돋움체 Medium",
-      "size": 18,
+      "size": 15,
       "bold": false,
       "align": "center"
     },
@@ -20,88 +20,89 @@
     "level1": {
       "symbol": "",
       "font": "KoPubWorld돋움체 Bold",
-      "size": 18,
+      "size": 16,
       "bold": true,
-      "paragraphSpaceBefore": 25,
-      "paragraphSpaceAfter": 8,
+      "paragraphSpaceBefore": 20,
+      "paragraphSpaceAfter": 6,
       "align": "justify",
-      "leftMargin": -15
+      "leftMargin": 0
     },
     "section_subtitle": {
       "symbol": "",
       "font": "KoPubWorld돋움체 Medium",
-      "size": 13,
+      "size": 15,
       "bold": false,
       "paragraphSpaceBefore": 15,
       "paragraphSpaceAfter": 6,
       "align": "justify",
-      "leftMargin": -15
+      "leftMargin": 0
     },
     "level2": {
       "symbol": "",
       "font": "KoPubWorld바탕체 Medium",
-      "size": 11,
+      "size": 15,
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 4
+      "leftMargin": 0
     },
     "level3": {
       "symbol": "□",
       "font": "KoPubWorld바탕체 Medium",
-      "size": 11,
+      "size": 15,
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 3,
-      "hangingIndent": 16
+      "leftMargin": 15,
+      "hangingIndent": 13
     },
     "level4": {
       "symbol": "○",
-      "font": "KoPubWorld돋움체 Medium",
-      "size": 10,
+      "font": "KoPubWorld바탕체 Medium",
+      "size": 15,
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": -12,
-      "hangingIndent": 10
+      "leftMargin": 28,
+      "hangingIndent": 13
     },
     "level5": {
       "symbol": "―",
-      "font": "KoPubWorld돋움체 Medium",
-      "size": 11,
+      "font": "KoPubWorld바탕체 Medium",
+      "size": 15,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": -11,
-      "hangingIndent": 10
+      "leftMargin": 41,
+      "hangingIndent": 13
     },
     "level6": {
       "symbol": "※",
-      "font": "KoPubWorld바탕체 Light",
-      "size": 10,
+      "font": "KoPubWorld돋움체 Medium",
+      "size": 13,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 38,
-      "hangingIndent": 10
+      "leftMargin": 41,
+      "hangingIndent": 13
     },
     "bullet": {
       "symbol": "●",
       "font": "KoPubWorld돋움체 Medium",
-      "size": 13,
+      "size": 15,
       "bold": false,
-      "paragraphSpaceBefore": 15,
-      "paragraphSpaceAfter": 6,
+      "paragraphSpaceBefore": 10,
+      "paragraphSpaceAfter": 5,
       "align": "justify",
-      "leftMargin": -15,
-      "hangingIndent": 0
+      "leftMargin": 15,
+      "hangingIndent": 13
     },
     "table": {
       "font": "KoPubWorld돋움체 Medium",
       "size": 10
     }
   },
+  "lineSpacing": 130,
   "colors": {
     "red": "#dc2626",
     "green": "#16a34a",
