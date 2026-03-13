@@ -36,8 +36,8 @@ def _resolve_styles_path(styles_file: str) -> Path:
     return p if p.is_absolute() else BASE_DIR / p
 
 
-def _build_generator(styles_path: Path) -> HWPXGenerator:
-    return HWPXGenerator(base_dir=str(BASE_DIR), styles_path=str(styles_path))
+def _build_generator(styles_path: Path, base_dir: str = "") -> HWPXGenerator:
+    return HWPXGenerator(base_dir=base_dir or str(BASE_DIR), styles_path=str(styles_path))
 
 
 def _resolve_project_output(project_dir: str, output_file: str, fallback_name: str = "output.hwpx") -> Path:
@@ -120,7 +120,8 @@ def convert_text_to_hwpx(
         data = parse_markdown_to_json(text_content, title=title)
         _inject_images(data, image_paths)
         styles_path = _resolve_styles_path(styles_file)
-        generator = _build_generator(styles_path)
+        gen_base = project_dir if project_dir else ""
+        generator = _build_generator(styles_path, base_dir=gen_base)
         _run_generator(generator, data, out_path)
 
         if out_path.exists():
@@ -184,13 +185,16 @@ def convert_md_to_hwpx(
         data = parse_markdown_to_json(text_content, title=title)
         _inject_images(data, image_paths)
         styles_path = _resolve_styles_path(styles_file)
-        generator = _build_generator(styles_path)
+        gen_base = project_dir if project_dir else str(md_path.parent)
+        generator = _build_generator(styles_path, base_dir=gen_base)
         _run_generator(generator, data, out_path)
 
         if out_path.exists():
             size = out_path.stat().st_size
-            img_count = len([p for p in image_paths.split(",") if p.strip()]) if image_paths else 0
-            img_msg = f"\n이미지: {img_count}개 삽입" if img_count else ""
+            img_count = sum(1 for item in data.get("content", [])
+                          for sub in (item.get("items", []) if item.get("type") == "section" else [item])
+                          if sub.get("type") == "image")
+            img_msg = f"\n인라인 이미지: {img_count}개 삽입" if img_count else ""
             return f"저장 완료!\n원본: {md_path}\n경로: {out_path}\n크기: {size:,} bytes{img_msg}"
         return f"오류: 파일 생성에 실패했습니다: {out_path}"
 
