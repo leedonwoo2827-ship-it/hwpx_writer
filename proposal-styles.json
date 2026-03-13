@@ -100,6 +100,22 @@
     "table": {
       "font": "KoPubWorld돋움체 Medium",
       "size": 10
+    },
+    "table_caption": {
+      "font": "KoPubWorld돋움체 Medium",
+      "size": 11,
+      "bold": true,
+      "align": "center",
+      "paragraphSpaceBefore": 10,
+      "paragraphSpaceAfter": 3
+    },
+    "image_caption": {
+      "font": "KoPubWorld돋움체 Medium",
+      "size": 11,
+      "bold": false,
+      "align": "center",
+      "paragraphSpaceBefore": 3,
+      "paragraphSpaceAfter": 10
     }
   },
   "lineSpacing": 130,

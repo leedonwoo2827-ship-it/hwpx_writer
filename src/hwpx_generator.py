@@ -185,15 +185,31 @@ class HWPXGenerator:
     def _resolve_image_path(self, image_path: str) -> str:
         """이미지 경로를 절대경로로 변환. 상대경로면 base_dir 기준."""
         p = Path(image_path)
-        if p.is_absolute():
+        if p.is_absolute() and p.is_file():
             return str(p)
+        # 1) base_dir 기준
         resolved = self.base_dir / p
         if resolved.is_file():
             return str(resolved)
-        # output/ 에서 실행된 경우 상위 폴더 기준도 시도
+        # 2) output/ 에서 실행된 경우 상위 폴더 기준
         parent_resolved = self.base_dir.parent / p
         if parent_resolved.is_file():
             return str(parent_resolved)
+        # 3) 파일명만으로 images/ 폴더에서 탐색
+        fname = p.name
+        for search_dir in [self.base_dir, self.base_dir.parent]:
+            img_dir = search_dir / "images"
+            if img_dir.is_dir():
+                candidate = img_dir / fname
+                if candidate.is_file():
+                    _log(f"[Resolve] Found image by filename: {candidate}")
+                    return str(candidate)
+                # 확장자 무관 탐색 (파일명 stem 매칭)
+                stem = p.stem.lower()
+                for f in img_dir.iterdir():
+                    if f.stem.lower() == stem and f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.gif'):
+                        _log(f"[Resolve] Found image by stem match: {f}")
+                        return str(f)
         return str(resolved)
 
     def _register_image(self, image_path: str) -> int:
@@ -666,12 +682,31 @@ class HWPXGenerator:
         )
 
     def _table_paragraph_xml(self, table_data: dict) -> str:
-        """표를 담는 paragraph XML"""
+        """표를 담는 paragraph XML (캡션 포함)"""
+        caption_xml = ""
+        caption = table_data.get("title", "")
+        if caption:
+            # 표 제목: 돋움체 가운데 정렬
+            cap_style = self.style_config.get("table_caption", {})
+            cap_font = cap_style.get("font", "KoPubWorld돋움체 Medium")
+            cap_size = cap_style.get("size", 11)
+            cap_height = self._pt_to_height(cap_size)
+            cap_charpr = self._get_charpr_id(cap_height, "#000000", cap_font, bold=True)
+            cap_parapr = self._get_parapr_id(
+                0,
+                self._pt_to_hwpunit(cap_style.get("paragraphSpaceBefore", 10)),
+                self._pt_to_hwpunit(cap_style.get("paragraphSpaceAfter", 3)),
+                "CENTER",
+            )
+            cap_runs = self._run_xml(caption, cap_charpr)
+            caption_xml = self._paragraph_xml(cap_runs, cap_parapr)
+
         tbl = self._table_xml(table_data)
         row_count = len(table_data.get("rows", [])) + (1 if table_data.get("headers") else 0)
         table_h = 1765 * row_count
 
         return (
+            caption_xml +
             f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0"'
             f' pageBreak="0" columnBreak="0" merged="0">'
             f'<hp:run charPrIDRef="0">'
@@ -836,8 +871,24 @@ class HWPXGenerator:
                     w_px, h_px = self._read_image_size(resolved)
                     body_paragraphs += self._image_paragraph_xml(bid, w_px, h_px)
                     _log(f"[Added] Image: {resolved} ({w_px}x{h_px}px)")
+                    # 이미지 캡션
+                    caption = item.get("caption", "")
+                    if caption:
+                        cap_style = self.style_config.get("image_caption", {})
+                        cap_font = cap_style.get("font", "KoPubWorld돋움체 Medium")
+                        cap_size = cap_style.get("size", 11)
+                        cap_height = self._pt_to_height(cap_size)
+                        cap_charpr = self._get_charpr_id(cap_height, "#000000", cap_font)
+                        cap_parapr = self._get_parapr_id(
+                            0,
+                            self._pt_to_hwpunit(cap_style.get("paragraphSpaceBefore", 3)),
+                            self._pt_to_hwpunit(cap_style.get("paragraphSpaceAfter", 10)),
+                            "CENTER",
+                        )
+                        cap_runs = self._run_xml(caption, cap_charpr)
+                        body_paragraphs += self._paragraph_xml(cap_runs, cap_parapr)
                 else:
-                    _log(f"[Warning] Image not found: {img_path}")
+                    _log(f"[Warning] Image not found: {img_path} (resolved: {resolved})")
 
         # 마지막 빈 문단 (한글 오피스 호환)
         body_paragraphs += self._paragraph_xml(

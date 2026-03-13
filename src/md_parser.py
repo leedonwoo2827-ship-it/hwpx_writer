@@ -142,6 +142,13 @@ def parse_markdown_to_json(
                     if current_section is None:
                         current_section = _new_section("")
                         content.append(current_section)
+                    # 바로 이전 아이템이 짧은 텍스트(level 2)면 표 제목(캡션)으로 승격
+                    items = current_section["items"]
+                    if (items and "type" not in items[-1]
+                            and items[-1].get("level") == 2
+                            and len(items[-1].get("text", "")) < 60):
+                        caption_item = items.pop()
+                        table["title"] = caption_item["text"]
                     current_section["items"].append(table)
                     i += consumed
                     continue
@@ -180,14 +187,18 @@ def parse_markdown_to_json(
         # ----------------------------------------------------------------
         img_match = re.match(r'^!\[([^\]]*)\]\(([^)]+)\)', stripped)
         if img_match:
+            img_alt = img_match.group(1).strip()
             img_path = img_match.group(2).strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            current_section["items"].append({
+            img_item = {
                 "type": "image",
                 "path": img_path,
-            })
+            }
+            if img_alt:
+                img_item["caption"] = img_alt
+            current_section["items"].append(img_item)
             i += 1
             continue
 
