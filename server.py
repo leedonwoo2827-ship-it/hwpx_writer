@@ -19,6 +19,7 @@ sys.path.insert(0, str(BASE_DIR / "src"))
 from mcp.server.fastmcp import FastMCP
 from md_parser import parse_markdown_to_json
 from hwpx_generator import HWPXGenerator
+from pdf_generator import generate_pdf
 
 DEFAULT_STYLES_PATH = BASE_DIR / "proposal-styles.json"
 
@@ -67,6 +68,21 @@ def _run_generator(generator: HWPXGenerator, data: dict, output_path: Path) -> N
     generator.generate(data, str(output_path))
 
 
+def _generate_pdf_if_requested(also_pdf: bool, data: dict, hwpx_path: Path, styles_path: Path, base_dir: str) -> str:
+    """HWPX와 동일 위치에 PDF를 생성합니다. 성공 시 결과 메시지, 실패 시 오류 메시지를 반환합니다."""
+    if not also_pdf:
+        return ""
+    pdf_path = hwpx_path.with_suffix(".pdf")
+    try:
+        generate_pdf(data, str(pdf_path), styles_path=str(styles_path), base_dir=base_dir)
+        size = pdf_path.stat().st_size
+        return f"\nPDF: {pdf_path} ({size:,} bytes)"
+    except ImportError as e:
+        return f"\nPDF 생성 실패: {e}"
+    except Exception as e:
+        return f"\nPDF 생성 오류: {type(e).__name__}: {e}"
+
+
 def _read_md_file(md_path: Path) -> str:
     """MD 파일을 바이트로 한번만 읽고 인코딩을 자동 감지하여 디코딩합니다."""
     raw = md_path.read_bytes()
@@ -91,9 +107,10 @@ def convert_text_to_hwpx(
     title: str = "",
     styles_file: str = "",
     project_dir: str = "",
-    image_paths: str = ""
+    image_paths: str = "",
+    also_pdf: bool = True
 ) -> str:
-    """Claude가 작성한 마크다운 텍스트를 HWPX 한글 문서 파일로 저장합니다.
+    """Claude가 작성한 마크다운 텍스트를 HWPX 한글 문서 파일로 저장합니다. PDF도 동시에 생성됩니다.
 
     마크다운 헤딩이 자동으로 한글 문서 레벨에 매핑됩니다:
       제목체: # → 문서 제목  ## → 섹션(1.)  ### → 소제목(1.1)
@@ -109,6 +126,7 @@ def convert_text_to_hwpx(
         styles_file: 스타일 파일 경로 (생략 시 proposal-styles.json)
         project_dir: 프로젝트 폴더 경로 (예: C:/Users/ubion/Documents/proposals/260311-n). 지정 시 output/ 하위에 저장
         image_paths: 삽입할 이미지 절대경로 목록 (쉼표 구분, 예: "C:/.../a.png,C:/.../b.png"). 문서 끝에 순서대로 삽입
+        also_pdf: PDF도 동시에 생성할지 여부 (기본값: True). HWPX와 동일 폴더에 같은 이름으로 .pdf 생성
 
     Returns:
         저장된 파일 경로 및 크기
@@ -128,7 +146,8 @@ def convert_text_to_hwpx(
             size = out_path.stat().st_size
             img_count = len([p for p in image_paths.split(",") if p.strip()]) if image_paths else 0
             img_msg = f"\n이미지: {img_count}개 삽입" if img_count else ""
-            return f"저장 완료!\n경로: {out_path}\n크기: {size:,} bytes{img_msg}"
+            pdf_msg = _generate_pdf_if_requested(also_pdf, data, out_path, styles_path, gen_base)
+            return f"저장 완료!\nHWPX: {out_path} ({size:,} bytes){img_msg}{pdf_msg}"
         return f"오류: 파일 생성에 실패했습니다: {out_path}"
 
     except Exception as e:
@@ -142,9 +161,10 @@ def convert_md_to_hwpx(
     title: str = "",
     styles_file: str = "",
     project_dir: str = "",
-    image_paths: str = ""
+    image_paths: str = "",
+    also_pdf: bool = True
 ) -> str:
-    """마크다운(.md) 파일을 읽어 HWPX 한글 문서로 변환합니다.
+    """마크다운(.md) 파일을 읽어 HWPX 한글 문서로 변환합니다. PDF도 동시에 생성됩니다.
 
     Args:
         md_file: 변환할 마크다운 파일 경로 (예: C:/Users/홍길동/Documents/보고서.md)
@@ -153,6 +173,7 @@ def convert_md_to_hwpx(
         styles_file: 스타일 파일 경로 (생략 시 proposal-styles.json)
         project_dir: 프로젝트 폴더 경로 (예: C:/Users/ubion/Documents/proposals/260311-n). 지정 시 output/ 하위에 저장
         image_paths: 삽입할 이미지 절대경로 목록 (쉼표 구분). 문서 끝에 순서대로 삽입
+        also_pdf: PDF도 동시에 생성할지 여부 (기본값: True). HWPX와 동일 폴더에 같은 이름으로 .pdf 생성
 
     Returns:
         저장된 파일 경로 및 크기
@@ -195,7 +216,8 @@ def convert_md_to_hwpx(
                           for sub in (item.get("items", []) if item.get("type") == "section" else [item])
                           if sub.get("type") == "image")
             img_msg = f"\n인라인 이미지: {img_count}개 삽입" if img_count else ""
-            return f"저장 완료!\n원본: {md_path}\n경로: {out_path}\n크기: {size:,} bytes{img_msg}"
+            pdf_msg = _generate_pdf_if_requested(also_pdf, data, out_path, styles_path, gen_base)
+            return f"저장 완료!\n원본: {md_path}\nHWPX: {out_path} ({size:,} bytes){img_msg}{pdf_msg}"
         return f"오류: 파일 생성에 실패했습니다: {out_path}"
 
     except Exception as e:

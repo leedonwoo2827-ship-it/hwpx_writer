@@ -94,15 +94,15 @@ Claude Desktop에서 자연어로 요청하면 됩니다.
 
 | 마크다운 | 기호 | 한글 문서 | 기본 스타일 |
 |---------|------|----------|-----------|
-| `# 제목` | (없음) | **제목체** (섹션 구분) | KoPubWorld돋움체 Bold, 22pt |
-| `# 섹션` | (없음) | **섹션 제목** (1., 1.1 등) | KoPubWorld돋움체 Bold, 16pt |
-| `## 본문` | (없음) | 일반 본문 | KoPubWorld바탕체 Medium, 15pt |
-| `### 본문` | □ | 본문 항목 (1칸 들여쓰기) | KoPubWorld바탕체 Medium, 15pt |
-| `#### 본문` | ○ | 세부 항목 (2칸 들여쓰기) | KoPubWorld바탕체 Medium, 15pt |
-| `##### 본문` | ― | 보충 항목 (3칸 들여쓰기) | KoPubWorld바탕체 Medium, 15pt |
-| `###### 본문` | ※ | 참고/주석 | KoPubWorld돋움체 Medium, 13pt |
+| `# 제목` | (없음) | **제목체** (섹션 구분) | Noto Sans KR Bold, 22pt |
+| `# 섹션` | (없음) | **섹션 제목** (1., 1.1 등) | Noto Sans KR Bold, 16pt |
+| `## 본문` | (없음) | 일반 본문 | Noto Serif KR, 15pt |
+| `### 본문` | □ | 본문 항목 (1칸 들여쓰기) | Noto Serif KR, 15pt |
+| `#### 본문` | ○ | 세부 항목 (2칸 들여쓰기) | Noto Serif KR, 15pt |
+| `##### 본문` | ― | 보충 항목 (3칸 들여쓰기) | Noto Serif KR, 15pt |
+| `###### 본문` | ※ | 참고/주석 | Noto Serif KR, 13pt |
 | `- 항목` | □ | 목록 (들여쓰기로 레벨 결정) | — |
-| `\| 표 \|` | — | 표 | KoPubWorld돋움체 Medium, 10pt |
+| `\| 표 \|` | — | 표 | Noto Sans KR, 10pt |
 
 ---
 
@@ -114,7 +114,7 @@ Claude Desktop에서 자연어로 요청하면 됩니다.
 {
   "styles": {
     "level1": {
-      "font": "KoPubWorld돋움체 Bold",
+      "font": "Noto Sans KR",
       "size": 16,
       "paragraphSpaceBefore": 20,
       "paragraphSpaceAfter": 6,
@@ -128,7 +128,9 @@ Claude Desktop에서 자연어로 요청하면 됩니다.
 }
 ```
 
-> 폰트는 **PC에 설치된 폰트 이름**을 정확히 입력해야 합니다.
+> 기본 폰트는 **Noto Sans KR**(제목/고딕) + **Noto Serif KR**(본문/명조)입니다.
+> Google 오픈 폰트 라이선스(OFL)로 저작권 자유입니다.
+> HWPX 파일은 해당 폰트가 PC에 없으면 한글 오피스 기본 폰트로 대체됩니다.
 
 ---
 
@@ -164,6 +166,7 @@ hwpx_writer/
 ├── requirements.txt        ← Python 패키지 목록
 ├── src/
 │   ├── hwpx_generator.py   ← HWPX 생성 엔진
+│   ├── pdf_generator.py    ← PDF 동시 생성 엔진
 │   └── md_parser.py        ← 마크다운 파서
 └── scripts/
     └── fix_namespaces.py   ← 호환성 후처리 유틸

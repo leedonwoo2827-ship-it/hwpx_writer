@@ -811,10 +811,12 @@ class HWPXGenerator:
                             _log(f"[Warning] Image not found: {img_path}")
                     elif sub_type == "subtitle":
                         sub_style = self.style_config.get("section_subtitle", {})
-                        sub_font = sub_style.get("font", "KoPubWorld바탕체 Medium")
-                        sub_size = sub_style.get("size", 13)
+                        sub_font = sub_style.get("font", "KoPubWorld돋움체 Bold")
+                        sub_size = sub_style.get("size", 15)
+                        sub_bold = sub_style.get("bold", True)
                         sub_charpr = self._get_charpr_id(
-                            self._pt_to_height(sub_size), "#000000", sub_font
+                            self._pt_to_height(sub_size), "#000000", sub_font,
+                            bold=sub_bold
                         )
                         sub_parapr = self._get_parapr_id(
                             self._pt_to_hwpunit(sub_style.get("leftMargin", 0)),
@@ -840,10 +842,11 @@ class HWPXGenerator:
                         else:
                             display_text = f"{symbol} {text}" if symbol else text
 
-                        # ● 항목은 bullet 스타일 적용
+                        # ● 항목은 bullet 스타일 적용 (● 기호 제거, 제목체)
                         if text and text.startswith('●'):
                             bullet_style = self.style_config.get("bullet", {})
                             use_style = bullet_style
+                            display_text = text.lstrip('●').strip()
                         else:
                             use_style = style
 

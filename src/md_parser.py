@@ -7,7 +7,7 @@
 헤딩 매핑 (# 수 = 레벨):
   #      → 제목체 (섹션 구분, 첫 번째는 문서 제목)
   ##     → level 2 (기호 없음, 일반 본문)
-  ###    → level 3 (□)
+  ###    → 소제목 (subtitle) — 제목체 스타일 적용
   ####   → level 4 (○)
   #####  → level 5 (―)
   ###### → level 6 (※)
@@ -99,13 +99,16 @@ def parse_markdown_to_json(
             i += 1
             continue
 
-        # ### → level 3 (□)
+        # ### → 소제목 (subtitle) — 제목체 스타일 적용
         if stripped.startswith("### "):
             text = stripped[4:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            current_section["items"].append(_item(3, text))
+            current_section["items"].append({
+                "type": "subtitle",
+                "text": _strip_bold(text),
+            })
             i += 1
             continue
 
@@ -128,6 +131,29 @@ def parse_markdown_to_json(
             else:
                 current_section = _new_section(h1_text)
                 content.append(current_section)
+            i += 1
+            continue
+
+        # ----------------------------------------------------------------
+        # 인라인 이미지 ![alt](path) — 목록/텍스트보다 먼저 감지
+        # ----------------------------------------------------------------
+        img_stripped = stripped.lstrip('-*+ \t')  # 목록 접두사 제거 후에도 이미지 감지
+        img_match = re.match(r'^!\[([^\]]*)\]\(([^)]+)\)', stripped)
+        if not img_match:
+            img_match = re.match(r'^!\[([^\]]*)\]\(([^)]+)\)', img_stripped)
+        if img_match:
+            img_alt = img_match.group(1).strip()
+            img_path = img_match.group(2).strip()
+            if current_section is None:
+                current_section = _new_section("")
+                content.append(current_section)
+            img_item = {
+                "type": "image",
+                "path": img_path,
+            }
+            if img_alt:
+                img_item["caption"] = img_alt
+            current_section["items"].append(img_item)
             i += 1
             continue
 
@@ -179,26 +205,6 @@ def parse_markdown_to_json(
         # 수평선 (--- / *** / ___)
         # ----------------------------------------------------------------
         if re.match(r"^[-*_]{3,}\s*$", stripped):
-            i += 1
-            continue
-
-        # ----------------------------------------------------------------
-        # 인라인 이미지 ![alt](path)
-        # ----------------------------------------------------------------
-        img_match = re.match(r'^!\[([^\]]*)\]\(([^)]+)\)', stripped)
-        if img_match:
-            img_alt = img_match.group(1).strip()
-            img_path = img_match.group(2).strip()
-            if current_section is None:
-                current_section = _new_section("")
-                content.append(current_section)
-            img_item = {
-                "type": "image",
-                "path": img_path,
-            }
-            if img_alt:
-                img_item["caption"] = img_alt
-            current_section["items"].append(img_item)
             i += 1
             continue
 
