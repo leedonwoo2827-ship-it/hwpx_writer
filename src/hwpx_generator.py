@@ -83,8 +83,8 @@ class HWPXGenerator:
     # ------------------------------------------------------------------
     @staticmethod
     def _font_family_type(face: str) -> str:
-        """폰트 이름으로 HWPX 계열 타입 반환 (바탕/명조 → MYEONGJO, 나머지 → GOTHIC)"""
-        myeongjo_keywords = ['바탕', '명조', 'Batang', 'Myeongjo', 'Gungsuh', 'Gulim']
+        """폰트 이름으로 HWPX 계열 타입 반환 (바탕/명조/Serif → MYEONGJO, 나머지 → GOTHIC)"""
+        myeongjo_keywords = ['바탕', '명조', 'Batang', 'Myeongjo', 'Gungsuh', 'Serif']
         if any(k in face for k in myeongjo_keywords):
             return "FCAT_MYEONGJO"
         return "FCAT_GOTHIC"
@@ -99,8 +99,10 @@ class HWPXGenerator:
 
     def _collect_fonts_from_styles(self):
         """스타일에서 사용하는 폰트를 모두 등록"""
-        # 기본 폰트 (id=0)
-        default_fonts = ["KoPubWorld바탕체 Medium", "KoPubWorld돋움체 Medium"]
+        # 기본 폰트: 스타일에서 본문(level2)과 제목(level1) 폰트를 가져옴
+        body_font = self.style_config.get("level2", {}).get("font", "Noto Serif KR")
+        heading_font = self.style_config.get("level1", {}).get("font", "Noto Sans KR")
+        default_fonts = [body_font, heading_font]
         for f in default_fonts:
             self._register_font(f)
 
