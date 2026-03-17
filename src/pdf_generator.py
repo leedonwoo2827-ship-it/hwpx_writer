@@ -38,6 +38,17 @@ def _hex_to_rgb(hex_color: str) -> tuple:
 _MARKER_RE = re.compile(r'\{\{(bold|red|green|blue|yellow|black):(.+?)\}\}')
 
 
+def _restore_cell_marker(cell) -> str:
+    """md_parser가 분리한 {"text": ..., "color": ...} dict를 인라인 마커로 복원."""
+    if isinstance(cell, dict):
+        text = cell.get("text", "")
+        color = cell.get("color", "")
+        if color and "{{" not in text:
+            return f"{{{{{color}:{text}}}}}"
+        return text
+    return str(cell)
+
+
 def _parse_segments(text: str, colors: dict) -> list:
     """텍스트를 [{text, bold, color}, ...] 세그먼트 리스트로 파싱합니다."""
     segments = []
@@ -99,8 +110,13 @@ class ProposalPDF(FPDF):
         else:
             # fallback: 맑은 고딕
             malgun = font_dir / "malgun.ttf"
+            malgun_bd = font_dir / "malgunbd.ttf"
             if malgun.exists():
                 self.add_font("MalgunGothic", "", str(malgun), uni=True)
+                if malgun_bd.exists():
+                    self.add_font("MalgunGothic", "B", str(malgun_bd), uni=True)
+                else:
+                    self.add_font("MalgunGothic", "B", str(malgun), uni=True)
                 self._gothic = "MalgunGothic"
             else:
                 self._gothic = "Helvetica"
@@ -196,7 +212,11 @@ class ProposalPDF(FPDF):
         self.set_x(self.l_margin + left_margin * 0.5)
 
         symbol = _SYMBOLS.get(level, "")
-        full_text = f"{symbol}{text}"
+        # 텍스트가 이미 기호로 시작하면 중복 방지
+        if symbol and text.lstrip().startswith(symbol.strip()):
+            full_text = text
+        else:
+            full_text = f"{symbol}{text}"
         segments = _parse_segments(full_text, self.colors)
         self._write_segments(segments, self._serif, size)
         self.ln(self._pt_to_mm(size) * self.line_spacing + space_after)
@@ -228,15 +248,28 @@ class ProposalPDF(FPDF):
         self.set_fill_color(240, 240, 240)
         self.set_draw_color(102, 102, 102)
         for header in headers:
-            self.cell(col_w, row_h, str(header), border=1, fill=True, align="C")
+            h_text = _restore_cell_marker(header)
+            self.cell(col_w, row_h, h_text, border=1, fill=True, align="C")
         self.ln()
 
         # 데이터 행
         self._set_gothic(size)
         for row in rows:
             for i, cell in enumerate(row):
-                cell_text = str(cell.get("text", cell) if isinstance(cell, dict) else cell)
-                self.cell(col_w, row_h, cell_text, border=1, align="L")
+                cell_text = _restore_cell_marker(cell)
+                segments = _parse_segments(cell_text, self.colors)
+                # 단순 텍스트(마커 없음)면 바로 출력
+                if len(segments) == 1 and not segments[0]["bold"] and not segments[0]["color"]:
+                    self.cell(col_w, row_h, segments[0]["text"], border=1, align="L")
+                else:
+                    x0 = self.get_x()
+                    y0 = self.get_y()
+                    # 셀 테두리만 먼저 그림
+                    self.cell(col_w, row_h, "", border=1)
+                    x_end = self.get_x()
+                    self.set_xy(x0 + 1, y0 + row_h * 0.15)
+                    self._write_segments(segments, self._gothic, size)
+                    self.set_xy(x_end, y0)
             self.ln()
 
         self.ln(2)
