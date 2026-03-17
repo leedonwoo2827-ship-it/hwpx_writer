@@ -404,6 +404,52 @@ class HWPXGenerator:
             f'</hh:paraPr>'
         )
 
+    def _build_table_parapr_xml(self, pid) -> str:
+        """표 셀 전용 paragraph style — 글자 단위 줄바꿈 허용"""
+        return (
+            f'<hh:paraPr id="{pid}" tabPrIDRef="0" condense="0"'
+            f' fontLineHeight="0" snapToGrid="1"'
+            f' suppressLineNumbers="0" checked="0">'
+            f'<hh:align horizontal="CENTER" vertical="BASELINE"/>'
+            f'<hh:heading type="NONE" idRef="0" level="0"/>'
+            f'<hh:breakSetting breakLatinWord="HYPHENATION"'
+            f' breakNonLatinWord="BREAK_ALL" widowOrphan="0"'
+            f' keepWithNext="0" keepLines="0" pageBreakBefore="0"'
+            f' lineWrap="BREAK"/>'
+            f'<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'
+            f'<hh:margin>'
+            f'<hc:intent value="0" unit="HWPUNIT"/>'
+            f'<hc:left value="0" unit="HWPUNIT"/>'
+            f'<hc:right value="0" unit="HWPUNIT"/>'
+            f'<hc:prev value="0" unit="HWPUNIT"/>'
+            f'<hc:next value="0" unit="HWPUNIT"/>'
+            f'</hh:margin>'
+            f'<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'
+            f'<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0"'
+            f' offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'
+            f'</hh:paraPr>'
+        )
+
+    def _get_table_parapr_id(self) -> int:
+        """표 셀 전용 parapr ID (캐싱)"""
+        if not hasattr(self, '_table_parapr_id_cache'):
+            pid = self._next_parapr_id
+            self._next_parapr_id += 1
+            self._table_parapr_list = [(pid,)]
+            self._table_parapr_id_cache = pid
+        return self._table_parapr_id_cache
+
+    @staticmethod
+    def _restore_cell_marker(cell) -> str:
+        """md_parser가 분리한 {"text": ..., "color": ...} dict를 인라인 마커로 복원"""
+        if isinstance(cell, dict):
+            text = cell.get("text", "")
+            color = cell.get("color", "")
+            if color and "{{" not in text:
+                return f"{{{{{color}:{text}}}}}"
+            return text
+        return str(cell)
+
     def _build_borderfills_xml(self) -> str:
         """기본 borderFill + 표용 borderFill 생성"""
         # ID 1~3: 기본 (투명 테두리)
@@ -460,12 +506,18 @@ class HWPXGenerator:
             charprs += self._build_charpr_xml(cid, height, color, fid, bold)
         charpr_cnt = 1 + len(self._charpr_list)
 
-        # ParaPr: id=0 (기본) + 동적 생성분
+        # ParaPr: id=0 (기본) + 동적 생성분 + 표 셀 전용
         parapr_default = self._build_parapr_xml(0, 0, 0, 0, "JUSTIFY")
         paraprs = parapr_default
         for pid, lm, sb, sa, align, indent in self._parapr_list:
             paraprs += self._build_parapr_xml(pid, lm, sb, sa, align, indent)
-        parapr_cnt = 1 + len(self._parapr_list)
+        # 표 셀 전용 parapr 추가
+        table_parapr_extra = 0
+        if hasattr(self, '_table_parapr_list'):
+            for (tpid,) in self._table_parapr_list:
+                paraprs += self._build_table_parapr_xml(tpid)
+                table_parapr_extra += 1
+        parapr_cnt = 1 + len(self._parapr_list) + table_parapr_extra
 
         borderfills = self._build_borderfills_xml()
         bindatalist = self._build_bindatalist_xml()
@@ -586,7 +638,7 @@ class HWPXGenerator:
     # ------------------------------------------------------------------
     def _table_cell_xml(self, text: str, charpr_id: int, col_idx: int,
                         row_idx: int, cell_width: int) -> str:
-        """표 셀 XML"""
+        """표 셀 XML — 글자 단위 줄바꿈 지원"""
         segments = self._parse_markers(text)
 
         # 셀 내부 run 들
@@ -595,7 +647,7 @@ class HWPXGenerator:
             if seg_color:
                 color_hex = self._resolve_color(seg_color)
                 table_style = self.style_config.get("table", {})
-                font = table_style.get("font", "KoPubWorld바탕체 Medium")
+                font = table_style.get("font", "Noto Serif KR")
                 size = table_style.get("size", 10)
                 cid = self._get_charpr_id(self._pt_to_height(size), color_hex, font)
             else:
@@ -603,6 +655,8 @@ class HWPXGenerator:
             cell_runs += self._run_xml(seg_text, cid)
 
         inner_width = max(cell_width - 1020, 1000)
+        # 표 셀 전용 parapr (글자 단위 줄바꿈)
+        tbl_parapr = self._get_table_parapr_id()
 
         return (
             f'<hp:tc name="" header="0" hasMargin="0" protect="0"'
@@ -610,20 +664,20 @@ class HWPXGenerator:
             f'<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK"'
             f' vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0"'
             f' textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'
-            f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0"'
+            f'<hp:p id="0" paraPrIDRef="{tbl_parapr}" styleIDRef="0"'
             f' pageBreak="0" columnBreak="0" merged="0">'
             f'{cell_runs}'
             f'<hp:linesegarray>'
-            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1200"'
-            f' textheight="1200" baseline="1020" spacing="720"'
+            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1600"'
+            f' textheight="1600" baseline="1300" spacing="800"'
             f' horzpos="0" horzsize="{inner_width}" flags="393216"/>'
             f'</hp:linesegarray>'
             f'</hp:p>'
             f'</hp:subList>'
             f'<hp:cellAddr colAddr="{col_idx}" rowAddr="{row_idx}"/>'
             f'<hp:cellSpan colSpan="1" rowSpan="1"/>'
-            f'<hp:cellSz width="{cell_width}" height="1765"/>'
-            f'<hp:cellMargin left="510" right="510" top="141" bottom="141"/>'
+            f'<hp:cellSz width="{cell_width}" height="0"/>'
+            f'<hp:cellMargin left="510" right="510" top="200" bottom="200"/>'
             f'</hp:tc>'
         )
 
@@ -636,7 +690,7 @@ class HWPXGenerator:
 
         # 표 글자 스타일
         table_style = self.style_config.get("table", {})
-        table_font = table_style.get("font", "KoPubWorld바탕체 Medium")
+        table_font = table_style.get("font", "Noto Serif KR")
         table_size = table_style.get("size", 10)
         table_height = self._pt_to_height(table_size)
         table_charpr = self._get_charpr_id(table_height, "#000000", table_font)
@@ -649,7 +703,7 @@ class HWPXGenerator:
         header_row = ""
         if headers:
             for ci, h in enumerate(headers):
-                h_text = h.get("text", "") if isinstance(h, dict) else str(h)
+                h_text = self._restore_cell_marker(h)
                 header_row += self._table_cell_xml(h_text, table_charpr, ci, 0, cell_width)
             header_row = f'<hp:tr>{header_row}</hp:tr>'
 
@@ -659,11 +713,11 @@ class HWPXGenerator:
             cells = ""
             row_idx = ri + (1 if headers else 0)
             for ci, cell in enumerate(row):
-                c_text = cell.get("text", "") if isinstance(cell, dict) else str(cell)
+                c_text = self._restore_cell_marker(cell)
                 cells += self._table_cell_xml(c_text, table_charpr, ci, row_idx, cell_width)
             data_rows += f'<hp:tr>{cells}</hp:tr>'
 
-        table_h = 1765 * row_count
+        table_h = 3500 * row_count
 
         return (
             f'<hp:tbl id="0" zOrder="0" numberingType="TABLE"'
@@ -688,24 +742,31 @@ class HWPXGenerator:
         caption_xml = ""
         caption = table_data.get("title", "")
         if caption:
-            # 표 제목: 돋움체 가운데 정렬
+            # 표 제목: 돋움체 가운데 정렬 (마커 파싱 포함)
             cap_style = self.style_config.get("table_caption", {})
-            cap_font = cap_style.get("font", "KoPubWorld돋움체 Medium")
+            cap_font = cap_style.get("font", "Noto Sans KR")
             cap_size = cap_style.get("size", 11)
             cap_height = self._pt_to_height(cap_size)
-            cap_charpr = self._get_charpr_id(cap_height, "#000000", cap_font, bold=True)
             cap_parapr = self._get_parapr_id(
                 0,
                 self._pt_to_hwpunit(cap_style.get("paragraphSpaceBefore", 10)),
                 self._pt_to_hwpunit(cap_style.get("paragraphSpaceAfter", 3)),
                 "CENTER",
             )
-            cap_runs = self._run_xml(caption, cap_charpr)
+            segments = self._parse_markers(caption)
+            cap_runs = ""
+            for seg_text, seg_color in segments:
+                if seg_color:
+                    color_hex = self._resolve_color(seg_color)
+                else:
+                    color_hex = "#000000"
+                cid = self._get_charpr_id(cap_height, color_hex, cap_font, bold=True)
+                cap_runs += self._run_xml(seg_text, cid)
             caption_xml = self._paragraph_xml(cap_runs, cap_parapr)
 
         tbl = self._table_xml(table_data)
         row_count = len(table_data.get("rows", [])) + (1 if table_data.get("headers") else 0)
-        table_h = 1765 * row_count
+        table_h = 3500 * row_count
 
         return (
             caption_xml +
@@ -744,7 +805,7 @@ class HWPXGenerator:
         include_title = metadata.get("include_title", False)
         if include_title and title:
             title_style = self.style_config.get("title", {})
-            title_font = title_style.get("font", "KoPubWorld바탕체 Medium")
+            title_font = title_style.get("font", "Noto Serif KR")
             title_size = title_style.get("size", 25)
             title_align = title_style.get("align", "center").upper()
             if title_align == "CENTER":
@@ -782,7 +843,7 @@ class HWPXGenerator:
                 section_title = item.get("title")
                 if include_section_titles and section_title:
                     sec_style = self.style_config.get("level1", {})
-                    sec_font = sec_style.get("font", "KoPubWorld바탕체 Medium")
+                    sec_font = sec_style.get("font", "Noto Serif KR")
                     sec_size = sec_style.get("size", 18)
                     sec_height = self._pt_to_height(sec_size)
                     sec_charpr = self._get_charpr_id(sec_height, "#000000", sec_font)
@@ -813,7 +874,7 @@ class HWPXGenerator:
                             _log(f"[Warning] Image not found: {img_path}")
                     elif sub_type == "subtitle":
                         sub_style = self.style_config.get("section_subtitle", {})
-                        sub_font = sub_style.get("font", "KoPubWorld돋움체 Bold")
+                        sub_font = sub_style.get("font", "Noto Sans KR")
                         sub_size = sub_style.get("size", 15)
                         sub_bold = sub_style.get("bold", True)
                         sub_charpr = self._get_charpr_id(
@@ -844,18 +905,18 @@ class HWPXGenerator:
                         else:
                             display_text = f"{symbol} {text}" if symbol else text
 
-                        # ● 항목은 bullet 스타일 적용 (● 기호 제거, 제목체)
+                        # ● 항목은 bullet 스타일 적용 (● 유지, 제목체)
                         if text and text.startswith('●'):
                             bullet_style = self.style_config.get("bullet", {})
                             use_style = bullet_style
-                            display_text = text.lstrip('●').strip()
+                            # display_text는 dedup에서 이미 ● 포함 상태 유지
                         else:
                             use_style = style
 
                         body_paragraphs += self._text_paragraph(
                             display_text,
                             level,
-                            use_style.get("font", "KoPubWorld바탕체 Medium"),
+                            use_style.get("font", "Noto Serif KR"),
                             use_style.get("size", 11),
                             use_style.get("leftMargin", 0),
                             use_style.get("paragraphSpaceBefore", 0),
@@ -880,17 +941,21 @@ class HWPXGenerator:
                     caption = item.get("caption", "")
                     if caption:
                         cap_style = self.style_config.get("image_caption", {})
-                        cap_font = cap_style.get("font", "KoPubWorld돋움체 Medium")
+                        cap_font = cap_style.get("font", "Noto Sans KR")
                         cap_size = cap_style.get("size", 11)
                         cap_height = self._pt_to_height(cap_size)
-                        cap_charpr = self._get_charpr_id(cap_height, "#000000", cap_font)
                         cap_parapr = self._get_parapr_id(
                             0,
                             self._pt_to_hwpunit(cap_style.get("paragraphSpaceBefore", 3)),
                             self._pt_to_hwpunit(cap_style.get("paragraphSpaceAfter", 10)),
                             "CENTER",
                         )
-                        cap_runs = self._run_xml(caption, cap_charpr)
+                        segments = self._parse_markers(caption)
+                        cap_runs = ""
+                        for seg_text, seg_color in segments:
+                            color_hex = self._resolve_color(seg_color) if seg_color else "#000000"
+                            cid = self._get_charpr_id(cap_height, color_hex, cap_font)
+                            cap_runs += self._run_xml(seg_text, cid)
                         body_paragraphs += self._paragraph_xml(cap_runs, cap_parapr)
                 else:
                     _log(f"[Warning] Image not found: {img_path} (resolved: {resolved})")

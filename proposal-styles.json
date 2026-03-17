@@ -2,25 +2,25 @@
   "styles": {
     "title": {
       "font": "Noto Sans KR",
-      "size": 22,
+      "size": 12,
       "bold": true,
       "align": "center"
     },
     "organization": {
       "font": "Noto Sans KR",
-      "size": 15,
+      "size": 11,
       "bold": false,
       "align": "center"
     },
     "date": {
       "font": "Noto Serif KR",
-      "size": 13,
+      "size": 10,
       "align": "center"
     },
     "level1": {
       "symbol": "",
       "font": "Noto Sans KR",
-      "size": 16,
+      "size": 12,
       "bold": true,
       "paragraphSpaceBefore": 20,
       "paragraphSpaceAfter": 6,
@@ -30,7 +30,7 @@
     "section_subtitle": {
       "symbol": "",
       "font": "Noto Sans KR",
-      "size": 15,
+      "size": 11,
       "bold": true,
       "paragraphSpaceBefore": 15,
       "paragraphSpaceAfter": 6,
@@ -40,7 +40,7 @@
     "level2": {
       "symbol": "",
       "font": "Noto Serif KR",
-      "size": 15,
+      "size": 10,
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
@@ -49,47 +49,47 @@
     "level3": {
       "symbol": "□",
       "font": "Noto Serif KR",
-      "size": 15,
+      "size": 10,
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 20,
-      "hangingIndent": 16
+      "leftMargin": 28,
+      "hangingIndent": 14
     },
     "level4": {
       "symbol": "□",
       "font": "Noto Serif KR",
-      "size": 15,
+      "size": 10,
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 20,
-      "hangingIndent": 16
+      "leftMargin": 28,
+      "hangingIndent": 14
     },
     "level5": {
       "symbol": "□",
       "font": "Noto Serif KR",
-      "size": 15,
+      "size": 10,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 20,
-      "hangingIndent": 16
+      "leftMargin": 28,
+      "hangingIndent": 14
     },
     "level6": {
       "symbol": "□",
       "font": "Noto Serif KR",
-      "size": 13,
+      "size": 10,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 20,
-      "hangingIndent": 16
+      "leftMargin": 28,
+      "hangingIndent": 14
     },
     "bullet": {
       "symbol": "",
       "font": "Noto Sans KR",
-      "size": 15,
+      "size": 10,
       "bold": true,
       "paragraphSpaceBefore": 15,
       "paragraphSpaceAfter": 5,
@@ -99,11 +99,11 @@
     },
     "table": {
       "font": "Noto Sans KR",
-      "size": 10
+      "size": 9
     },
     "table_caption": {
       "font": "Noto Sans KR",
-      "size": 11,
+      "size": 10,
       "bold": true,
       "align": "center",
       "paragraphSpaceBefore": 10,
@@ -111,7 +111,7 @@
     },
     "image_caption": {
       "font": "Noto Sans KR",
-      "size": 11,
+      "size": 10,
       "bold": false,
       "align": "center",
       "paragraphSpaceBefore": 3,
