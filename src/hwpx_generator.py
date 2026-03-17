@@ -43,7 +43,6 @@ _ALL_NS = (
     'xmlns:dc="http://purl.org/dc/elements/1.1/" '
     'xmlns:opf="http://www.idpf.org/2007/opf/" '
     'xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" '
-    'xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" '
     'xmlns:epub="http://www.idpf.org/2007/ops" '
     'xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0"'
 )
@@ -451,23 +450,50 @@ class HWPXGenerator:
         return str(cell)
 
     def _build_borderfills_xml(self) -> str:
-        """기본 borderFill + 표용 borderFill 생성"""
-        # ID 1~3: 기본 (투명 테두리)
-        bfs = ""
-        for bid in range(1, 4):
-            bfs += (
-                f'<hh:borderFill id="{bid}" threeD="0" shadow="0"'
-                f' centerLine="NONE" breakCellSeparateLine="0">'
-                f'<hh:slash type="NONE" Crooked="0" isCounter="0"/>'
-                f'<hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'
-                f'<hh:leftBorder type="NONE" width="0.1 mm" color="#000000"/>'
-                f'<hh:rightBorder type="NONE" width="0.1 mm" color="#000000"/>'
-                f'<hh:topBorder type="NONE" width="0.1 mm" color="#000000"/>'
-                f'<hh:bottomBorder type="NONE" width="0.1 mm" color="#000000"/>'
-                f'<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'
-                f'</hh:borderFill>'
-            )
-        # ID 4: 표 외곽용 (SOLID 테두리)
+        """기본 borderFill + 표용 borderFill 생성 (한글 오피스 호환)"""
+        # ID 1: 페이지 테두리용 (투명)
+        bfs = (
+            '<hh:borderFill id="1" threeD="0" shadow="0"'
+            ' centerLine="NONE" breakCellSeparateLine="0">'
+            '<hh:slash type="NONE" Crooked="0" isCounter="0"/>'
+            '<hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'
+            '<hh:leftBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:rightBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:topBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:bottomBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>'
+            '</hh:borderFill>'
+        )
+        # ID 2: 기본 문단 border용 (투명, fillBrush 포함)
+        bfs += (
+            '<hh:borderFill id="2" threeD="0" shadow="0"'
+            ' centerLine="NONE" breakCellSeparateLine="0">'
+            '<hh:slash type="NONE" Crooked="0" isCounter="0"/>'
+            '<hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'
+            '<hh:leftBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:rightBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:topBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:bottomBorder type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>'
+            '<hc:fillBrush>'
+            '<hc:winBrush faceColor="none" hatchColor="#999999" alpha="0"/>'
+            '</hc:fillBrush>'
+            '</hh:borderFill>'
+        )
+        # ID 3: 표 본문 셀용 (SOLID 테두리)
+        bfs += (
+            '<hh:borderFill id="3" threeD="0" shadow="0"'
+            ' centerLine="NONE" breakCellSeparateLine="0">'
+            '<hh:slash type="NONE" Crooked="0" isCounter="0"/>'
+            '<hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'
+            '<hh:leftBorder type="SOLID" width="0.12 mm" color="#000000"/>'
+            '<hh:rightBorder type="SOLID" width="0.12 mm" color="#000000"/>'
+            '<hh:topBorder type="SOLID" width="0.12 mm" color="#000000"/>'
+            '<hh:bottomBorder type="SOLID" width="0.12 mm" color="#000000"/>'
+            '<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>'
+            '</hh:borderFill>'
+        )
+        # ID 4: 표 헤더 셀용 (SOLID 테두리 + 회색 배경)
         bfs += (
             '<hh:borderFill id="4" threeD="0" shadow="0"'
             ' centerLine="NONE" breakCellSeparateLine="0">'
@@ -477,30 +503,130 @@ class HWPXGenerator:
             '<hh:rightBorder type="SOLID" width="0.12 mm" color="#000000"/>'
             '<hh:topBorder type="SOLID" width="0.12 mm" color="#000000"/>'
             '<hh:bottomBorder type="SOLID" width="0.12 mm" color="#000000"/>'
-            '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'
+            '<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>'
+            '<hc:fillBrush>'
+            '<hc:winBrush faceColor="#D9D9D9" hatchColor="#999999" alpha="0"/>'
+            '</hc:fillBrush>'
             '</hh:borderFill>'
         )
-        # ID 5: 셀용 (SOLID 테두리, 연회색 배경)
-        bfs += (
-            '<hh:borderFill id="5" threeD="0" shadow="0"'
-            ' centerLine="NONE" breakCellSeparateLine="0">'
-            '<hh:slash type="NONE" Crooked="0" isCounter="0"/>'
-            '<hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'
-            '<hh:leftBorder type="SOLID" width="0.12 mm" color="#C4C4C4"/>'
-            '<hh:rightBorder type="SOLID" width="0.12 mm" color="#C4C4C4"/>'
-            '<hh:topBorder type="SOLID" width="0.12 mm" color="#C4C4C4"/>'
-            '<hh:bottomBorder type="SOLID" width="0.12 mm" color="#C4C4C4"/>'
-            '<hh:diagonal type="NONE" width="0.1 mm" color="#000000"/>'
-            '</hh:borderFill>'
+        return f'<hh:borderFills itemCnt="4">{bfs}</hh:borderFills>'
+
+    def _build_tab_properties_xml(self) -> str:
+        """tabProperties XML — 한글 오피스 필수 요소"""
+        return (
+            '<hh:tabProperties itemCnt="3">'
+            '<hh:tabPr id="0" autoTabLeft="0" autoTabRight="0"/>'
+            '<hh:tabPr id="1" autoTabLeft="1" autoTabRight="0"/>'
+            '<hh:tabPr id="2" autoTabLeft="0" autoTabRight="1"/>'
+            '</hh:tabProperties>'
         )
-        return f'<hh:borderFills itemCnt="5">{bfs}</hh:borderFills>'
+
+    def _build_numberings_xml(self) -> str:
+        """numberings XML — 한글 오피스 필수 요소"""
+        return (
+            '<hh:numberings itemCnt="1">'
+            '<hh:numbering id="1" start="0">'
+            '<hh:paraHead start="1" level="1" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="DIGIT" charPrIDRef="4294967295"'
+            ' checkable="0">^1.</hh:paraHead>'
+            '<hh:paraHead start="1" level="2" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="HANGUL_SYLLABLE" charPrIDRef="4294967295"'
+            ' checkable="0">^2.</hh:paraHead>'
+            '<hh:paraHead start="1" level="3" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="DIGIT" charPrIDRef="4294967295"'
+            ' checkable="0">^3)</hh:paraHead>'
+            '<hh:paraHead start="1" level="4" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="HANGUL_SYLLABLE" charPrIDRef="4294967295"'
+            ' checkable="0">^4)</hh:paraHead>'
+            '<hh:paraHead start="1" level="5" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="DIGIT" charPrIDRef="4294967295"'
+            ' checkable="0">(^5)</hh:paraHead>'
+            '<hh:paraHead start="1" level="6" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="HANGUL_SYLLABLE" charPrIDRef="4294967295"'
+            ' checkable="0">(^6)</hh:paraHead>'
+            '<hh:paraHead start="1" level="7" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="CIRCLED_DIGIT" charPrIDRef="4294967295"'
+            ' checkable="1">^7</hh:paraHead>'
+            '<hh:paraHead start="1" level="8" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="CIRCLED_HANGUL_SYLLABLE" charPrIDRef="4294967295"'
+            ' checkable="1">^8</hh:paraHead>'
+            '<hh:paraHead start="1" level="9" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="HANGUL_JAMO" charPrIDRef="4294967295"'
+            ' checkable="0"/>'
+            '<hh:paraHead start="1" level="10" align="LEFT" useInstWidth="1"'
+            ' autoIndent="1" widthAdjust="0" textOffsetType="PERCENT"'
+            ' textOffset="50" numFormat="ROMAN_SMALL" charPrIDRef="4294967295"'
+            ' checkable="1"/>'
+            '</hh:numbering>'
+            '</hh:numberings>'
+        )
+
+    def _build_styles_xml(self) -> str:
+        """styles XML — 한글 오피스 필수 요소 (기본 스타일 22개)"""
+        return (
+            '<hh:styles itemCnt="22">'
+            '<hh:style id="0" type="PARA" name="바탕글" engName="Normal"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="0" langID="1042" lockForm="0"/>'
+            '<hh:style id="1" type="PARA" name="본문" engName="Body"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="1" langID="1042" lockForm="0"/>'
+            '<hh:style id="2" type="PARA" name="개요 1" engName="Outline 1"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="2" langID="1042" lockForm="0"/>'
+            '<hh:style id="3" type="PARA" name="개요 2" engName="Outline 2"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="3" langID="1042" lockForm="0"/>'
+            '<hh:style id="4" type="PARA" name="개요 3" engName="Outline 3"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="4" langID="1042" lockForm="0"/>'
+            '<hh:style id="5" type="PARA" name="개요 4" engName="Outline 4"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="5" langID="1042" lockForm="0"/>'
+            '<hh:style id="6" type="PARA" name="개요 5" engName="Outline 5"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="6" langID="1042" lockForm="0"/>'
+            '<hh:style id="7" type="PARA" name="개요 6" engName="Outline 6"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="7" langID="1042" lockForm="0"/>'
+            '<hh:style id="8" type="PARA" name="개요 7" engName="Outline 7"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="8" langID="1042" lockForm="0"/>'
+            '<hh:style id="9" type="PARA" name="개요 8" engName="Outline 8"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="9" langID="1042" lockForm="0"/>'
+            '<hh:style id="10" type="PARA" name="개요 9" engName="Outline 9"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="10" langID="1042" lockForm="0"/>'
+            '<hh:style id="11" type="PARA" name="개요 10" engName="Outline 10"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="11" langID="1042" lockForm="0"/>'
+            '<hh:style id="12" type="CHAR" name="쪽 번호" engName="Page Number"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="0" langID="1042" lockForm="0"/>'
+            '<hh:style id="13" type="PARA" name="머리말" engName="Header"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="13" langID="1042" lockForm="0"/>'
+            '<hh:style id="14" type="PARA" name="각주" engName="Footnote"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="14" langID="1042" lockForm="0"/>'
+            '<hh:style id="15" type="PARA" name="미주" engName="Endnote"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="15" langID="1042" lockForm="0"/>'
+            '<hh:style id="16" type="PARA" name="메모" engName="Memo"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="16" langID="1042" lockForm="0"/>'
+            '<hh:style id="17" type="PARA" name="차례 제목" engName="TOC Heading"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="17" langID="1042" lockForm="0"/>'
+            '<hh:style id="18" type="PARA" name="차례 1" engName="TOC 1"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="18" langID="1042" lockForm="0"/>'
+            '<hh:style id="19" type="PARA" name="차례 2" engName="TOC 2"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="19" langID="1042" lockForm="0"/>'
+            '<hh:style id="20" type="PARA" name="차례 3" engName="TOC 3"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="20" langID="1042" lockForm="0"/>'
+            '<hh:style id="21" type="PARA" name="캡션" engName="Caption"'
+            ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="21" langID="1042" lockForm="0"/>'
+            '</hh:styles>'
+        )
 
     def _build_header_xml(self) -> str:
-        """header.xml 전체 생성"""
+        """header.xml 전체 생성 (한글 오피스 호환)"""
         fontfaces = self._build_fontfaces_xml()
 
         # CharPr: id=0 (기본) + 동적 생성분
-        charpr_default = self._build_charpr_xml(0, 1100, "#000000", 0)
+        charpr_default = self._build_charpr_xml(0, 1000, "#000000", 0)
         charprs = charpr_default
         for cid, height, color, fid, bold in self._charpr_list:
             charprs += self._build_charpr_xml(cid, height, color, fid, bold)
@@ -520,28 +646,38 @@ class HWPXGenerator:
         parapr_cnt = 1 + len(self._parapr_list) + table_parapr_extra
 
         borderfills = self._build_borderfills_xml()
-        bindatalist = self._build_bindatalist_xml()
+        tab_properties = self._build_tab_properties_xml()
+        numberings = self._build_numberings_xml()
+        styles = self._build_styles_xml()
 
         return (
             f'<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-            f'<hh:head {_ALL_NS} version="1.5" secCnt="1">'
+            f'<hh:head {_ALL_NS} version="1.2" secCnt="1">'
             f'<hh:beginNum page="1" footnote="1" endnote="1" pic="1" tbl="1" equation="1"/>'
             f'<hh:refList>'
             f'{fontfaces}'
             f'{borderfills}'
             f'<hh:charProperties itemCnt="{charpr_cnt}">{charprs}</hh:charProperties>'
+            f'{tab_properties}'
+            f'{numberings}'
             f'<hh:paraProperties itemCnt="{parapr_cnt}">{paraprs}</hh:paraProperties>'
-            f'{bindatalist}'
+            f'{styles}'
             f'</hh:refList>'
+            f'<hh:compatibleDocument targetProgram="HWP201X">'
+            f'<hh:layoutCompatibility/>'
+            f'</hh:compatibleDocument>'
+            f'<hh:docOption>'
+            f'<hh:linkinfo path="" pageInherit="0" footnoteInherit="0"/>'
+            f'</hh:docOption>'
+            f'<hh:trackchageConfig flags="56"/>'
             f'</hh:head>'
         )
 
     def _build_secpr_xml(self) -> str:
-        """페이지 설정 (secPr) — A4, 상하좌우 여백"""
+        """페이지 설정 (secPr) — A4, 상하좌우 여백 (한글 오피스 호환)"""
         return (
             '<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134"'
-            ' tabStop="8000" tabStopVal="4000" tabStopUnit="HWPUNIT"'
-            ' outlineShapeIDRef="1" memoShapeIDRef="1"'
+            ' tabStop="8000" outlineShapeIDRef="1" memoShapeIDRef="0"'
             ' textVerticalWidthHead="0" masterPageCnt="0">'
             '<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>'
             '<hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>'
@@ -549,9 +685,9 @@ class HWPXGenerator:
             ' hideFirstMasterPage="0" border="SHOW_ALL" fill="SHOW_ALL"'
             ' hideFirstPageNum="0" hideFirstEmptyLine="0" showLineNumber="0"/>'
             '<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>'
-            '<hp:pagePr landscape="WIDELY" width="59528" height="84188" gutterType="LEFT_ONLY">'
-            '<hp:margin header="4251" footer="4251" gutter="0"'
-            ' left="5669" right="5669" top="4251" bottom="4251"/>'
+            '<hp:pagePr landscape="WIDELY" width="59528" height="84186" gutterType="LEFT_ONLY">'
+            '<hp:margin header="4252" footer="4252" gutter="0"'
+            ' left="8504" right="8504" top="5668" bottom="4252"/>'
             '</hp:pagePr>'
             '<hp:footNotePr>'
             '<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
@@ -637,7 +773,8 @@ class HWPXGenerator:
     # 표 XML 빌더
     # ------------------------------------------------------------------
     def _table_cell_xml(self, text: str, charpr_id: int, col_idx: int,
-                        row_idx: int, cell_width: int) -> str:
+                        row_idx: int, cell_width: int,
+                        is_header: bool = False) -> str:
         """표 셀 XML — 글자 단위 줄바꿈 지원"""
         segments = self._parse_markers(text)
 
@@ -657,10 +794,12 @@ class HWPXGenerator:
         inner_width = max(cell_width - 1020, 1000)
         # 표 셀 전용 parapr (글자 단위 줄바꿈)
         tbl_parapr = self._get_table_parapr_id()
+        # 헤더 셀: borderFillIDRef=4 (회색 배경), 본문 셀: 3 (흰 배경)
+        bf_id = "4" if is_header else "3"
 
         return (
             f'<hp:tc name="" header="0" hasMargin="0" protect="0"'
-            f' editable="0" dirty="0" borderFillIDRef="5">'
+            f' editable="0" dirty="0" borderFillIDRef="{bf_id}">'
             f'<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK"'
             f' vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0"'
             f' textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'
@@ -668,21 +807,21 @@ class HWPXGenerator:
             f' pageBreak="0" columnBreak="0" merged="0">'
             f'{cell_runs}'
             f'<hp:linesegarray>'
-            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1600"'
-            f' textheight="1600" baseline="1300" spacing="800"'
+            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1000"'
+            f' textheight="1000" baseline="850" spacing="600"'
             f' horzpos="0" horzsize="{inner_width}" flags="393216"/>'
             f'</hp:linesegarray>'
             f'</hp:p>'
             f'</hp:subList>'
             f'<hp:cellAddr colAddr="{col_idx}" rowAddr="{row_idx}"/>'
             f'<hp:cellSpan colSpan="1" rowSpan="1"/>'
-            f'<hp:cellSz width="{cell_width}" height="0"/>'
-            f'<hp:cellMargin left="510" right="510" top="200" bottom="200"/>'
+            f'<hp:cellSz width="{cell_width}" height="282"/>'
+            f'<hp:cellMargin left="510" right="510" top="141" bottom="141"/>'
             f'</hp:tc>'
         )
 
     def _table_xml(self, table_data: dict) -> str:
-        """표 XML 생성"""
+        """표 XML 생성 (한글 오피스 호환 구조)"""
         headers = table_data.get("headers", [])
         rows = table_data.get("rows", [])
         col_count = len(headers) if headers else 1
@@ -695,8 +834,8 @@ class HWPXGenerator:
         table_height = self._pt_to_height(table_size)
         table_charpr = self._get_charpr_id(table_height, "#000000", table_font)
 
-        # A4 본문 폭 기준 (좌우 여백 제외, 약간의 여유 포함)
-        total_width = 47600
+        # 본문 폭: 페이지폭(59528) - 좌여백(8504) - 우여백(8504) = 42520
+        total_width = 42520
         cell_width = total_width // col_count
 
         # 헤더 행
@@ -704,7 +843,8 @@ class HWPXGenerator:
         if headers:
             for ci, h in enumerate(headers):
                 h_text = self._restore_cell_marker(h)
-                header_row += self._table_cell_xml(h_text, table_charpr, ci, 0, cell_width)
+                header_row += self._table_cell_xml(
+                    h_text, table_charpr, ci, 0, cell_width, is_header=True)
             header_row = f'<hp:tr>{header_row}</hp:tr>'
 
         # 데이터 행
@@ -717,21 +857,21 @@ class HWPXGenerator:
                 cells += self._table_cell_xml(c_text, table_charpr, ci, row_idx, cell_width)
             data_rows += f'<hp:tr>{cells}</hp:tr>'
 
-        table_h = 3500 * row_count
+        table_h = 3846
 
         return (
             f'<hp:tbl id="0" zOrder="0" numberingType="TABLE"'
             f' textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0"'
             f' dropcapstyle="None" pageBreak="CELL" repeatHeader="1"'
             f' rowCnt="{row_count}" colCnt="{col_count}"'
-            f' cellSpacing="0" borderFillIDRef="4" noAdjust="0">'
+            f' cellSpacing="0" borderFillIDRef="3" noAdjust="0">'
             f'<hp:sz width="{total_width}" widthRelTo="ABSOLUTE"'
             f' height="{table_h}" heightRelTo="ABSOLUTE" protect="0"/>'
-            f'<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1"'
+            f'<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1"'
             f' allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA"'
             f' horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT"'
             f' vertOffset="0" horzOffset="0"/>'
-            f'<hp:outMargin left="0" right="0" top="141" bottom="141"/>'
+            f'<hp:outMargin left="283" right="283" top="283" bottom="283"/>'
             f'<hp:inMargin left="510" right="510" top="141" bottom="141"/>'
             f'{header_row}{data_rows}'
             f'</hp:tbl>'
@@ -765,8 +905,6 @@ class HWPXGenerator:
             caption_xml = self._paragraph_xml(cap_runs, cap_parapr)
 
         tbl = self._table_xml(table_data)
-        row_count = len(table_data.get("rows", [])) + (1 if table_data.get("headers") else 0)
-        table_h = 3500 * row_count
 
         return (
             caption_xml +
@@ -774,10 +912,10 @@ class HWPXGenerator:
             f' pageBreak="0" columnBreak="0" merged="0">'
             f'<hp:run charPrIDRef="0">'
             f'{tbl}'
-            f'<hp:t></hp:t>'
+            f'<hp:t/>'
             f'</hp:run>'
             f'<hp:linesegarray>'
-            f'<hp:lineseg textpos="0" vertpos="{table_h}" vertsize="1000"'
+            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1000"'
             f' textheight="1000" baseline="850" spacing="600"'
             f' horzpos="0" horzsize="0" flags="393216"/>'
             f'</hp:linesegarray>'
@@ -803,6 +941,14 @@ class HWPXGenerator:
 
         # 제목 추가
         include_title = metadata.get("include_title", False)
+        # colPr: 단 설정 (한글 오피스 필수)
+        colpr = (
+            '<hp:ctrl>'
+            '<hp:colPr id="" type="NEWSPAPER" layout="LEFT"'
+            ' colCount="1" sameSz="1" sameGap="0"/>'
+            '</hp:ctrl>'
+        )
+
         if include_title and title:
             title_style = self.style_config.get("title", {})
             title_font = title_style.get("font", "Noto Serif KR")
@@ -815,21 +961,21 @@ class HWPXGenerator:
             title_parapr = self._get_parapr_id(0, 0, self._pt_to_hwpunit(10), title_align)
 
             runs = self._run_xml(title, title_charpr)
-            # 첫 문단에 secPr 포함
+            # 첫 문단에 secPr + colPr 포함
             body_paragraphs += (
                 f'<hp:p id="0" paraPrIDRef="{title_parapr}"'
                 f' styleIDRef="0" pageBreak="0"'
                 f' columnBreak="0" merged="0">'
-                f'<hp:run charPrIDRef="0">{secpr}</hp:run>'
+                f'<hp:run charPrIDRef="0">{secpr}{colpr}</hp:run>'
                 f'{runs}'
                 f'</hp:p>'
             )
         else:
-            # 제목 없으면 빈 첫 문단에 secPr 포함
+            # 제목 없으면 빈 첫 문단에 secPr + colPr 포함
             body_paragraphs += (
                 f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0"'
                 f' pageBreak="0" columnBreak="0" merged="0">'
-                f'<hp:run charPrIDRef="0">{secpr}<hp:t></hp:t></hp:run>'
+                f'<hp:run charPrIDRef="0">{secpr}{colpr}</hp:run>'
                 f'</hp:p>'
             )
 
@@ -960,9 +1106,17 @@ class HWPXGenerator:
                 else:
                     _log(f"[Warning] Image not found: {img_path} (resolved: {resolved})")
 
-        # 마지막 빈 문단 (한글 오피스 호환)
-        body_paragraphs += self._paragraph_xml(
-            '<hp:run charPrIDRef="0"><hp:t></hp:t></hp:run>', 0
+        # 마지막 빈 문단 (한글 오피스 호환 — linesegarray 포함)
+        body_paragraphs += (
+            '<hp:p id="0" paraPrIDRef="0" styleIDRef="0"'
+            ' pageBreak="0" columnBreak="0" merged="0">'
+            '<hp:run charPrIDRef="0"/>'
+            '<hp:linesegarray>'
+            '<hp:lineseg textpos="0" vertpos="0" vertsize="1000"'
+            ' textheight="1000" baseline="850" spacing="600"'
+            ' horzpos="0" horzsize="42520" flags="393216"/>'
+            '</hp:linesegarray>'
+            '</hp:p>'
         )
 
         _log("[Step 3] Building header.xml...")
@@ -991,9 +1145,9 @@ class HWPXGenerator:
         version_xml = (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
             '<hv:HCFVersion xmlns:hv="http://www.hancom.co.kr/hwpml/2011/version"'
-            ' tagetApplication="WORDPROCESSOR" major="5" minor="1" micro="1"'
-            ' buildNumber="0" os="1" xmlVersion="1.5"'
-            ' application="Hancom Office Hangul" appVersion="12, 0, 0, 535 WIN32LEWindows_10"/>'
+            ' tagetApplication="WORDPROCESSOR" major="5" minor="1" micro="0"'
+            ' buildNumber="1" os="1" xmlVersion="1.2"'
+            ' application="Hancom Office Hangul" appVersion="11, 0, 0, 2129 WIN32LEWindows_8"/>'
         )
 
         container_xml = (
@@ -1003,6 +1157,10 @@ class HWPXGenerator:
             '<ocf:rootfiles>'
             '<ocf:rootfile full-path="Contents/content.hpf"'
             ' media-type="application/hwpml-package+xml"/>'
+            '<ocf:rootfile full-path="Preview/PrvText.txt"'
+            ' media-type="text/plain"/>'
+            '<ocf:rootfile full-path="META-INF/container.rdf"'
+            ' media-type="application/rdf+xml"/>'
             '</ocf:rootfiles>'
             '</ocf:container>'
         )
@@ -1095,6 +1253,19 @@ class HWPXGenerator:
             _write("Contents/content.hpf", content_hpf)
             _write("Contents/header.xml", header_xml)
             _write("Contents/section0.xml", section_xml)
+
+            # Preview 파일 (한글 오피스 호환 필수)
+            _write("Preview/PrvText.txt", "")
+
+            # 빈 1x1 PNG 이미지 (PrvImage.png)
+            import base64
+            _EMPTY_PNG = base64.b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4"
+                "nGNgYPgPAAEDAQAIicLsAAAABElFTkSuQmCC"
+            )
+            prv_info = zipfile.ZipInfo("Preview/PrvImage.png")
+            prv_info.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(prv_info, _EMPTY_PNG)
 
             # 이미지 파일을 ZIP에 추가
             # 한글 오피스 방식: BinData/imageN.png (Contents/ 접두사 없음)
