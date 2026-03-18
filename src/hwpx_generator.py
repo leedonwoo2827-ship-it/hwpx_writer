@@ -443,8 +443,8 @@ class HWPXGenerator:
         return getattr(self, cache_key)
 
     @staticmethod
-    def _restore_cell_marker(cell) -> str:
-        """md_parser가 분리한 {"text": ..., "color": ...} dict를 인라인 마커로 복원"""
+    def _ensure_str(cell) -> str:
+        """셀 데이터를 문자열로 보장합니다. (하위호환: dict → 인라인 마커 복원)"""
         if isinstance(cell, dict):
             text = cell.get("text", "")
             color = cell.get("color", "")
@@ -833,7 +833,7 @@ class HWPXGenerator:
         col_count = len(headers) if headers else (len(rows[0]) if rows else 1)
         # 빈 헤더 감지 (| | | 같은 경우)
         has_visible_header = any(
-            (self._restore_cell_marker(h).strip() if isinstance(h, (dict, str)) else str(h).strip())
+            (self._ensure_str(h).strip() if isinstance(h, (dict, str)) else str(h).strip())
             for h in headers
         ) if headers else False
         row_count = len(rows) + (1 if has_visible_header else 0)
@@ -853,7 +853,7 @@ class HWPXGenerator:
         header_row = ""
         if has_visible_header:
             for ci, h in enumerate(headers):
-                h_text = self._restore_cell_marker(h)
+                h_text = self._ensure_str(h)
                 header_row += self._table_cell_xml(
                     h_text, table_charpr, ci, 0, cell_width, is_header=True)
             header_row = f'<hp:tr>{header_row}</hp:tr>'
@@ -864,7 +864,7 @@ class HWPXGenerator:
             cells = ""
             row_idx = ri + (1 if has_visible_header else 0)
             for ci, cell in enumerate(row):
-                c_text = self._restore_cell_marker(cell)
+                c_text = self._ensure_str(cell)
                 cells += self._table_cell_xml(c_text, table_charpr, ci, row_idx, cell_width)
             data_rows += f'<hp:tr>{cells}</hp:tr>'
 

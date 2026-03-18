@@ -38,8 +38,8 @@ def _hex_to_rgb(hex_color: str) -> tuple:
 _MARKER_RE = re.compile(r'\{\{(bold|red|green|blue|yellow|black):(.+?)\}\}')
 
 
-def _restore_cell_marker(cell) -> str:
-    """md_parser가 분리한 {"text": ..., "color": ...} dict를 인라인 마커로 복원."""
+def _ensure_str(cell) -> str:
+    """셀 데이터를 문자열로 보장합니다. (하위호환: dict → 인라인 마커 복원)"""
     if isinstance(cell, dict):
         text = cell.get("text", "")
         color = cell.get("color", "")
@@ -265,6 +265,55 @@ class ProposalPDF(FPDF):
             return _hex_to_rgb(self.colors.get(m.group(1), "#000000"))
         return None
 
+    # ------------------------------------------------------------------
+    # 표 셀 전처리: 입구에서 한 번만 처리
+    # ------------------------------------------------------------------
+    def _prepare_table_cells(self, raw_cells: list) -> list:
+        """원본 셀 리스트 → [{"plain": str, "segments": list}, ...] 로 변환.
+
+        이후 코드는 plain(높이 계산용)과 segments(렌더링용)만 사용하므로
+        마커가 높이 계산에 섞이거나 렌더링에서 누락될 수 없습니다.
+        """
+        result = []
+        for cell in raw_cells:
+            raw = _ensure_str(cell)
+            plain = self._strip_markers(raw)
+            segments = _parse_segments(raw, self.colors)
+            result.append({"plain": plain, "segments": segments})
+        return result
+
+    def _render_cell_segments(self, segments: list, x: float, y: float,
+                              col_w: float, line_h: float, size: float,
+                              align: str = "L", bold: bool = False):
+        """셀 내부에 세그먼트를 렌더링합니다. 단색 셀은 multi_cell, 다색은 write."""
+        # 색상이 하나뿐인 셀 (대부분): multi_cell로 자동 줄바꿈
+        has_mixed = len(segments) > 1 or any(s["bold"] for s in segments)
+        first_color = segments[0]["color"] if segments else None
+
+        self.set_xy(x + 1, y + 0.5)
+
+        if not has_mixed:
+            # 단일 세그먼트: multi_cell (자동 줄바꿈)
+            if first_color:
+                self.set_text_color(*first_color)
+            else:
+                self.set_text_color(0, 0, 0)
+            style = "B" if bold else ""
+            self.set_font(self._gothic, style, size)
+            self.multi_cell(col_w - 2, line_h, segments[0]["text"], align=align)
+        else:
+            # 다중 세그먼트: write로 인라인 렌더링
+            for seg in segments:
+                if seg["color"]:
+                    self.set_text_color(*seg["color"])
+                else:
+                    self.set_text_color(0, 0, 0)
+                style = "B" if (seg["bold"] or bold) else ""
+                self.set_font(self._gothic, style, size)
+                self.write(line_h, seg["text"])
+
+        self.set_text_color(0, 0, 0)
+
     def render_table(self, table: dict):
         """테이블을 렌더링합니다."""
         s = self.styles.get("table", {})
@@ -291,15 +340,9 @@ class ProposalPDF(FPDF):
         usable_w = self.w - self.l_margin - self.r_margin
         col_w = usable_w / col_count
 
-        # 모든 텍스트 → 마커 제거한 plain text로 통일
-        def to_plain_row(raw_cells):
-            return [self._strip_markers(_restore_cell_marker(c)) for c in raw_cells]
-
-        def to_color_row(raw_cells):
-            return [self._detect_cell_color(_restore_cell_marker(c)) for c in raw_cells]
-
-        # 헤더 처리
-        header_plains = to_plain_row(headers)
+        # ★ 입구에서 모든 셀을 한 번만 전처리 → 이후 마커 누출 불가능
+        header_cells = self._prepare_table_cells(headers)
+        header_plains = [c["plain"] for c in header_cells]
         has_visible_header = any(h.strip() for h in header_plains)
 
         self.set_draw_color(102, 102, 102)
@@ -309,20 +352,20 @@ class ProposalPDF(FPDF):
             row_h = self._calc_row_height(header_plains, col_w, size)
             y0 = self.get_y()
             x0 = self.l_margin
-            for ci, h_text in enumerate(header_plains):
+            for ci, cell in enumerate(header_cells):
                 x = x0 + ci * col_w
                 self.rect(x, y0, col_w, row_h, "FD")
-                self.set_xy(x + 1, y0 + 0.5)
-                self._set_gothic(size, bold=True)
-                self.multi_cell(col_w - 2, line_h, h_text, align="C")
+                self._render_cell_segments(
+                    cell["segments"], x, y0, col_w, line_h, size,
+                    align="C", bold=True)
             self.set_xy(x0, y0 + row_h)
 
         # 데이터 행
         for row in rows:
-            plains = to_plain_row(row)
-            colors = to_color_row(row)
+            row_cells = self._prepare_table_cells(row)
+            row_plains = [c["plain"] for c in row_cells]
             self._set_gothic(size)
-            row_h = self._calc_row_height(plains, col_w, size)
+            row_h = self._calc_row_height(row_plains, col_w, size)
 
             # 페이지 넘김
             if self.get_y() + row_h > self.h - self.b_margin:
@@ -330,18 +373,12 @@ class ProposalPDF(FPDF):
 
             y0 = self.get_y()
             x0 = self.l_margin
-            for ci, plain in enumerate(plains):
+            for ci, cell in enumerate(row_cells):
                 x = x0 + ci * col_w
                 self.rect(x, y0, col_w, row_h)
-                color = colors[ci] if ci < len(colors) else None
-                if color:
-                    self.set_text_color(*color)
-                else:
-                    self.set_text_color(0, 0, 0)
-                self.set_xy(x + 1, y0 + 0.5)
-                self._set_gothic(size)
-                self.multi_cell(col_w - 2, line_h, plain, align="L")
-                self.set_text_color(0, 0, 0)
+                self._render_cell_segments(
+                    cell["segments"], x, y0, col_w, line_h, size,
+                    align="L", bold=False)
             self.set_xy(x0, y0 + row_h)
 
         self.ln(2)

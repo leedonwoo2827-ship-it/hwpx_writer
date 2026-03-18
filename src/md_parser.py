@@ -316,11 +316,8 @@ def _parse_table(lines: list, start: int) -> tuple:
                 cell_text = "-"
             # **볼드** 마커를 {{bold:...}}로 변환
             cell_text = _strip_bold(cell_text)
-            color_match = re.match(r"^\{\{(red|green|blue|yellow|black):(.+)\}\}$", cell_text.strip())
-            if color_match:
-                row.append({"text": color_match.group(2), "color": color_match.group(1)})
-            else:
-                row.append(cell_text)
+            # 항상 문자열로 통일 (마커는 인라인 유지)
+            row.append(cell_text)
         rows.append(row)
         i += 1
 
