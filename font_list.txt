@@ -1,0 +1,7 @@
+0: 함초롬돋움
+1: 함초롬바탕
+2: KoPubWorld돋움체 Bold
+3: KoPubWorld돋움체 Medium
+4: KoPubWorld바탕체 Light
+5: KoPubWorld바탕체 Medium
+6: KoPubWorld돋움체 Light

@@ -1,0 +1,16 @@
+0: <hh:charProperties itemCnt="8"><hh:charPr id="0" height="1100" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/><hh:ratio hangul="100" latin="100" hanja="100
+
+1: <hh:charPr id="1" height="2800" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="2" latin="2" hanja="2" japanese="2" other="2" symbol="2" user="2"/><hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" sy
+
+2: <hh:charPr id="2" height="1800" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="2" latin="2" hanja="2" japanese="2" other="2" symbol="2" user="2"/><hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" sy
+
+3: <hh:charPr id="3" height="1300" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="3" latin="3" hanja="3" japanese="3" other="3" symbol="3" user="3"/><hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" sy
+
+4: <hh:charPr id="4" height="1100" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="5" latin="5" hanja="5" japanese="5" other="5" symbol="5" user="5"/><hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" sy
+
+5: <hh:charPr id="5" height="1100" textColor="#16A34A" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="5" latin="5" hanja="5" japanese="5" other="5" symbol="5" user="5"/><hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" sy
+
+6: <hh:charPr id="6" height="1100" textColor="#DC2626" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="5" latin="5" hanja="5" japanese="5" other="5" symbol="5" user="5"/><hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" sy
+
+7: <hh:charPr id="7" height="1000" textColor="#000000" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2"><hh:fontRef hangul="4" latin="4" hanja="4" japanese="4" other="4" symbol="4" user="4"/><hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" sy
+

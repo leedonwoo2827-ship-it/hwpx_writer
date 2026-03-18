@@ -228,11 +228,12 @@ class ProposalPDF(FPDF):
         inner_w = col_w - 2
         if inner_w <= 0:
             inner_w = col_w
+        self._set_gothic(size)
         text_w = self.get_string_width(text)
         if text_w <= inner_w:
             return line_h
-        # 줄 수 계산
-        num_lines = max(1, int(text_w / inner_w) + 1)
+        # 줄 수 계산 (여유분 추가)
+        num_lines = max(1, int(text_w / inner_w + 0.99) + 1)
         return line_h * num_lines
 
     def _calc_row_height(self, cells_text: list, col_w: float, size: float) -> float:
@@ -308,15 +309,25 @@ class ProposalPDF(FPDF):
                 x = x0 + ci * col_w
                 # 셀 테두리
                 self.rect(x, y0, col_w, row_h)
-                # 셀 내용
+                # 셀 내용: 항상 multi_cell 사용 (overflow 방지)
                 segments = _parse_segments(cell_text, self.colors)
-                self.set_xy(x + 1, y0 + 0.5)
-                if len(segments) == 1 and not segments[0]["bold"] and not segments[0]["color"]:
-                    self._set_gothic(size)
-                    self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
-                                    segments[0]["text"], align="L")
+                # 주요 색상 감지 (첫 번째 색상 마커를 셀 전체에 적용)
+                cell_color = None
+                for seg in segments:
+                    if seg["color"]:
+                        cell_color = seg["color"]
+                        break
+                if cell_color:
+                    self.set_text_color(*cell_color)
                 else:
-                    self._write_segments(segments, self._gothic, size)
+                    self.set_text_color(0, 0, 0)
+                # plain text로 multi_cell 렌더링 (셀 경계 존중)
+                plain = plain_texts[ci] if ci < len(plain_texts) else ""
+                self.set_xy(x + 1, y0 + 0.5)
+                self._set_gothic(size)
+                self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
+                                plain, align="L")
+                self.set_text_color(0, 0, 0)
             self.set_xy(x0, y0 + row_h)
 
         self.ln(2)
