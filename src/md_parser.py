@@ -6,8 +6,8 @@
 
 헤딩 매핑 (# 수 = 레벨):
   #      → 제목체 (섹션 구분, 첫 번째는 문서 제목)
-  ##     → level 2 (기호 없음, 일반 본문)
-  ###    → 소제목 (subtitle) — 제목체 스타일 적용
+  ##     → 중간 제목 (subtitle level 1) — section_subtitle보다 한 단계 큰 제목체
+  ###    → 소제목 (subtitle level 2) — 제목체 스타일 적용
   ####   → level 4 (○)
   #####  → level 5 (―)
   ###### → level 6 (※)
@@ -99,7 +99,7 @@ def parse_markdown_to_json(
             i += 1
             continue
 
-        # ### → 소제목 (subtitle) — 제목체 스타일 적용
+        # ### → 소제목 (subtitle level 2) — 제목체 스타일 적용
         if stripped.startswith("### "):
             text = stripped[4:].strip()
             if current_section is None:
@@ -108,17 +108,22 @@ def parse_markdown_to_json(
             current_section["items"].append({
                 "type": "subtitle",
                 "text": _strip_bold(text),
+                "subtitle_level": 2,
             })
             i += 1
             continue
 
-        # ## → level 2 (기호 없음, 일반 본문)
+        # ## → 중간 제목 (subtitle level 1) — 제목체 스타일 (###보다 한 단계 큼)
         if stripped.startswith("## "):
             text = stripped[3:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            current_section["items"].append(_item(2, text))
+            current_section["items"].append({
+                "type": "subtitle",
+                "text": _strip_bold(text),
+                "subtitle_level": 1,
+            })
             i += 1
             continue
 
@@ -288,17 +293,26 @@ def _parse_table(lines: list, start: int) -> tuple:
     if start + 1 >= len(lines) or not _is_separator_line(lines[start + 1]):
         return None, 0
 
+    col_count = len(headers)
+
     rows = []
     i = start + 2
     while i < len(lines):
         row_line = lines[i].strip()
         if not row_line.startswith("|"):
             break
-        raw_cells = [c.strip() for c in row_line.split("|")]
-        cells_raw = [c for c in raw_cells if c != ""]
+        # 선행/후행 | 를 제거하고 내부 셀만 분리 (빈 셀 보존)
+        inner = row_line.strip("|")
+        cells_raw = [c.strip() for c in inner.split("|")]
+        # 열 수 맞추기: 부족하면 "-" 채움, 초과하면 자르기
+        while len(cells_raw) < col_count:
+            cells_raw.append("-")
+        cells_raw = cells_raw[:col_count]
 
         row = []
         for cell_text in cells_raw:
+            if not cell_text:
+                cell_text = "-"
             color_match = re.match(r"^\{\{(red|green|blue|yellow|black):(.+)\}\}$", cell_text.strip())
             if color_match:
                 row.append({"text": color_match.group(2), "color": color_match.group(1)})

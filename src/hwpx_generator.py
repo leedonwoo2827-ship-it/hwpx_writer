@@ -1019,7 +1019,12 @@ class HWPXGenerator:
                         else:
                             _log(f"[Warning] Image not found: {img_path}")
                     elif sub_type == "subtitle":
-                        sub_style = self.style_config.get("section_subtitle", {})
+                        # subtitle_level: 1=## (큰 제목), 2=### (소제목)
+                        subtitle_level = sub.get("subtitle_level", 2)
+                        if subtitle_level == 1:
+                            sub_style = self.style_config.get("level1", {})
+                        else:
+                            sub_style = self.style_config.get("section_subtitle", {})
                         sub_font = sub_style.get("font", "Noto Sans KR")
                         sub_size = sub_style.get("size", 15)
                         sub_bold = sub_style.get("bold", True)

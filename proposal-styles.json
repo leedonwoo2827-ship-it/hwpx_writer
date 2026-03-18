@@ -20,7 +20,7 @@
     "level1": {
       "symbol": "",
       "font": "Noto Sans KR",
-      "size": 12,
+      "size": 13,
       "bold": true,
       "paragraphSpaceBefore": 20,
       "paragraphSpaceAfter": 6,
@@ -53,8 +53,8 @@
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 28,
-      "hangingIndent": 14
+      "leftMargin": 31,
+      "hangingIndent": 15.3
     },
     "level4": {
       "symbol": "□",
@@ -63,8 +63,8 @@
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 28,
-      "hangingIndent": 14
+      "leftMargin": 31,
+      "hangingIndent": 15.3
     },
     "level5": {
       "symbol": "□",
@@ -73,8 +73,8 @@
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 28,
-      "hangingIndent": 14
+      "leftMargin": 31,
+      "hangingIndent": 15.3
     },
     "level6": {
       "symbol": "□",
@@ -83,8 +83,8 @@
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 28,
-      "hangingIndent": 14
+      "leftMargin": 31,
+      "hangingIndent": 15.3
     },
     "bullet": {
       "symbol": "",
