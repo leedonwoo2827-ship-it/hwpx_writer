@@ -857,7 +857,8 @@ class HWPXGenerator:
                 cells += self._table_cell_xml(c_text, table_charpr, ci, row_idx, cell_width)
             data_rows += f'<hp:tr>{cells}</hp:tr>'
 
-        table_h = 3846
+        # 행당 약 1282 HWPUNIT (참조 파일 기준: 3행 = 3846)
+        table_h = 1282 * row_count
 
         return (
             f'<hp:tbl id="0" zOrder="0" numberingType="TABLE"'
