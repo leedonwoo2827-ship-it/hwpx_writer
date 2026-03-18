@@ -64,6 +64,14 @@ def _inject_images(data: dict, image_paths_str: str) -> None:
         data["content"].append({"type": "image", "path": p})
 
 
+def _save_json(data: dict, hwpx_path: Path) -> str:
+    """HWPX와 동일 위치에 중간 JSON을 저장합니다."""
+    json_path = hwpx_path.with_suffix(".json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return str(json_path)
+
+
 def _run_generator(generator: HWPXGenerator, data: dict, output_path: Path) -> None:
     generator.generate(data, str(output_path))
 
@@ -140,6 +148,7 @@ def convert_text_to_hwpx(
         styles_path = _resolve_styles_path(styles_file)
         gen_base = project_dir if project_dir else ""
         generator = _build_generator(styles_path, base_dir=gen_base)
+        json_path = _save_json(data, out_path)
         _run_generator(generator, data, out_path)
 
         if out_path.exists():
@@ -147,7 +156,7 @@ def convert_text_to_hwpx(
             img_count = len([p for p in image_paths.split(",") if p.strip()]) if image_paths else 0
             img_msg = f"\n이미지: {img_count}개 삽입" if img_count else ""
             pdf_msg = _generate_pdf_if_requested(also_pdf, data, out_path, styles_path, gen_base)
-            return f"저장 완료!\nHWPX: {out_path} ({size:,} bytes){img_msg}{pdf_msg}"
+            return f"저장 완료!\nJSON: {json_path}\nHWPX: {out_path} ({size:,} bytes){img_msg}{pdf_msg}"
         return f"오류: 파일 생성에 실패했습니다: {out_path}"
 
     except Exception as e:
@@ -208,6 +217,7 @@ def convert_md_to_hwpx(
         styles_path = _resolve_styles_path(styles_file)
         gen_base = project_dir if project_dir else str(md_path.parent)
         generator = _build_generator(styles_path, base_dir=gen_base)
+        json_path = _save_json(data, out_path)
         _run_generator(generator, data, out_path)
 
         if out_path.exists():
@@ -217,7 +227,7 @@ def convert_md_to_hwpx(
                           if sub.get("type") == "image")
             img_msg = f"\n인라인 이미지: {img_count}개 삽입" if img_count else ""
             pdf_msg = _generate_pdf_if_requested(also_pdf, data, out_path, styles_path, gen_base)
-            return f"저장 완료!\n원본: {md_path}\nHWPX: {out_path} ({size:,} bytes){img_msg}{pdf_msg}"
+            return f"저장 완료!\n원본: {md_path}\nJSON: {json_path}\nHWPX: {out_path} ({size:,} bytes){img_msg}{pdf_msg}"
         return f"오류: 파일 생성에 실패했습니다: {out_path}"
 
     except Exception as e:

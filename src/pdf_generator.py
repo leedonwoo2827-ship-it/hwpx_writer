@@ -221,6 +221,30 @@ class ProposalPDF(FPDF):
         self._write_segments(segments, self._serif, size)
         self.ln(self._pt_to_mm(size) * self.line_spacing + space_after)
 
+    def _calc_cell_height(self, text: str, col_w: float, size: float) -> float:
+        """셀 텍스트가 차지할 높이를 계산합니다 (줄바꿈 고려)."""
+        line_h = self._pt_to_mm(size) * self.line_spacing
+        # 텍스트 폭 계산 (좌우 패딩 1mm씩 제외)
+        inner_w = col_w - 2
+        if inner_w <= 0:
+            inner_w = col_w
+        text_w = self.get_string_width(text)
+        if text_w <= inner_w:
+            return line_h
+        # 줄 수 계산
+        num_lines = max(1, int(text_w / inner_w) + 1)
+        return line_h * num_lines
+
+    def _calc_row_height(self, cells_text: list, col_w: float, size: float) -> float:
+        """행의 최대 높이를 계산합니다."""
+        min_h = self._pt_to_mm(size) * 1.8
+        max_h = min_h
+        for text in cells_text:
+            h = self._calc_cell_height(text, col_w, size)
+            if h > max_h:
+                max_h = h
+        return max_h
+
     def render_table(self, table: dict):
         """테이블을 렌더링합니다."""
         s = self.styles.get("table", {})
@@ -241,36 +265,55 @@ class ProposalPDF(FPDF):
         # 컬럼 너비 계산
         usable_w = self.w - self.l_margin - self.r_margin
         col_w = usable_w / len(headers)
-        row_h = self._pt_to_mm(size) * 1.8
 
         # 헤더
         self._set_gothic(size, bold=True)
         self.set_fill_color(240, 240, 240)
         self.set_draw_color(102, 102, 102)
-        for header in headers:
-            h_text = _restore_cell_marker(header)
-            self.cell(col_w, row_h, h_text, border=1, fill=True, align="C")
-        self.ln()
+        header_texts = [_restore_cell_marker(h) for h in headers]
+        row_h = self._calc_row_height(header_texts, col_w, size)
+        y0 = self.get_y()
+        x0 = self.get_x()
+        for ci, h_text in enumerate(header_texts):
+            x = x0 + ci * col_w
+            self.set_xy(x, y0)
+            self.rect(x, y0, col_w, row_h, "FD")
+            self.set_xy(x + 1, y0 + 0.5)
+            self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
+                            h_text, align="C")
+        self.set_xy(x0, y0 + row_h)
 
         # 데이터 행
-        self._set_gothic(size)
         for row in rows:
-            for i, cell in enumerate(row):
-                cell_text = _restore_cell_marker(cell)
+            cells_text = [_restore_cell_marker(cell) for cell in row]
+            # 색상 마커 제거 후 텍스트 길이로 높이 계산
+            plain_texts = []
+            for ct in cells_text:
+                plain = _MARKER_RE.sub(lambda m: m.group(2), ct)
+                plain_texts.append(plain)
+            self._set_gothic(size)
+            row_h = self._calc_row_height(plain_texts, col_w, size)
+
+            # 페이지 넘김 체크
+            if self.get_y() + row_h > self.h - self.b_margin:
+                self.add_page()
+
+            y0 = self.get_y()
+            x0 = self.l_margin
+            for ci, cell_text in enumerate(cells_text):
+                x = x0 + ci * col_w
+                # 셀 테두리
+                self.rect(x, y0, col_w, row_h)
+                # 셀 내용
                 segments = _parse_segments(cell_text, self.colors)
-                # 단순 텍스트(마커 없음)면 바로 출력
+                self.set_xy(x + 1, y0 + 0.5)
                 if len(segments) == 1 and not segments[0]["bold"] and not segments[0]["color"]:
-                    self.cell(col_w, row_h, segments[0]["text"], border=1, align="L")
+                    self._set_gothic(size)
+                    self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
+                                    segments[0]["text"], align="L")
                 else:
-                    x0 = self.get_x()
-                    y0 = self.get_y()
-                    # 셀 테두리만 먼저 그림
-                    self.cell(col_w, row_h, "", border=1)
-                    x_end = self.get_x()
-                    self.set_xy(x0 + 1, y0 + row_h * 0.15)
                     self._write_segments(segments, self._gothic, size)
-                    self.set_xy(x_end, y0)
-            self.ln()
+            self.set_xy(x0, y0 + row_h)
 
         self.ln(2)
 

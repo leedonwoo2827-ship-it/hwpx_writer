@@ -868,7 +868,7 @@ class HWPXGenerator:
             f' cellSpacing="0" borderFillIDRef="3" noAdjust="0">'
             f'<hp:sz width="{total_width}" widthRelTo="ABSOLUTE"'
             f' height="{table_h}" heightRelTo="ABSOLUTE" protect="0"/>'
-            f'<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1"'
+            f'<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1"'
             f' allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA"'
             f' horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT"'
             f' vertOffset="0" horzOffset="0"/>'
