@@ -222,26 +222,33 @@ class ProposalPDF(FPDF):
         self.ln(self._pt_to_mm(size) * self.line_spacing + space_after)
 
     def _calc_cell_height(self, text: str, col_w: float, size: float) -> float:
-        """셀 텍스트가 차지할 높이를 계산합니다 (줄바꿈 고려)."""
+        """셀 텍스트가 차지할 높이를 계산합니다 (글자 단위 줄바꿈 시뮬레이션)."""
         line_h = self._pt_to_mm(size) * self.line_spacing
-        # 텍스트 폭 계산 (좌우 패딩 1mm씩 제외)
         inner_w = col_w - 2
         if inner_w <= 0:
             inner_w = col_w
-        self._set_gothic(size)
-        text_w = self.get_string_width(text)
-        if text_w <= inner_w:
+        if not text or not text.strip():
             return line_h
-        # 줄 수 계산 (여유분 추가)
-        num_lines = max(1, int(text_w / inner_w + 0.99) + 1)
-        return line_h * num_lines
+        self._set_gothic(size)
+        # 글자 단위로 줄바꿈 시뮬레이션 (한글 CJK 호환)
+        lines = 1
+        current_w = 0.0
+        for ch in text:
+            ch_w = self.get_string_width(ch)
+            if current_w + ch_w > inner_w:
+                lines += 1
+                current_w = ch_w
+            else:
+                current_w += ch_w
+        return line_h * lines
 
-    def _calc_row_height(self, cells_text: list, col_w: float, size: float) -> float:
-        """행의 최대 높이를 계산합니다."""
+    def _calc_row_height(self, cells_text: list, col_w_list, size: float) -> float:
+        """행의 최대 높이를 계산합니다. col_w_list는 float 또는 list."""
         min_h = self._pt_to_mm(size) * 1.8
         max_h = min_h
-        for text in cells_text:
-            h = self._calc_cell_height(text, col_w, size)
+        for ci, text in enumerate(cells_text):
+            cw = col_w_list[ci] if isinstance(col_w_list, list) else col_w_list
+            h = self._calc_cell_height(text, cw, size)
             if h > max_h:
                 max_h = h
         return max_h
