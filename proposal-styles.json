@@ -57,33 +57,33 @@
       "hangingIndent": 15.3
     },
     "level4": {
-      "symbol": "□",
+      "symbol": "○",
       "font": "Noto Serif KR",
       "size": 10,
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 31,
+      "leftMargin": 41,
       "hangingIndent": 15.3
     },
     "level5": {
-      "symbol": "□",
+      "symbol": "―",
       "font": "Noto Serif KR",
       "size": 10,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 31,
+      "leftMargin": 51,
       "hangingIndent": 15.3
     },
     "level6": {
-      "symbol": "□",
+      "symbol": "※",
       "font": "Noto Serif KR",
       "size": 10,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
-      "leftMargin": 31,
+      "leftMargin": 61,
       "hangingIndent": 15.3
     },
     "bullet": {
