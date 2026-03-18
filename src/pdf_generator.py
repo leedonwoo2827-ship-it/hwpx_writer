@@ -259,29 +259,33 @@ class ProposalPDF(FPDF):
             self.cell(0, 5, title, align="C", new_x="LMARGIN", new_y="NEXT")
             self.ln(1)
 
-        if not headers:
+        if not headers and not rows:
             return
 
-        # 컬럼 너비 계산
+        # 컬럼 수: 헤더 또는 첫 번째 데이터 행 기준
+        col_count = len(headers) if headers else (len(rows[0]) if rows else 1)
         usable_w = self.w - self.l_margin - self.r_margin
-        col_w = usable_w / len(headers)
+        col_w = usable_w / col_count
 
-        # 헤더
-        self._set_gothic(size, bold=True)
-        self.set_fill_color(240, 240, 240)
-        self.set_draw_color(102, 102, 102)
+        # 헤더가 있고, 내용이 비어있지 않은 경우에만 헤더 행 렌더링
         header_texts = [_restore_cell_marker(h) for h in headers]
-        row_h = self._calc_row_height(header_texts, col_w, size)
-        y0 = self.get_y()
-        x0 = self.get_x()
-        for ci, h_text in enumerate(header_texts):
-            x = x0 + ci * col_w
-            self.set_xy(x, y0)
-            self.rect(x, y0, col_w, row_h, "FD")
-            self.set_xy(x + 1, y0 + 0.5)
-            self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
-                            h_text, align="C")
-        self.set_xy(x0, y0 + row_h)
+        has_visible_header = any(h.strip() for h in header_texts)
+
+        self.set_draw_color(102, 102, 102)
+        if has_visible_header:
+            self._set_gothic(size, bold=True)
+            self.set_fill_color(240, 240, 240)
+            row_h = self._calc_row_height(header_texts, col_w, size)
+            y0 = self.get_y()
+            x0 = self.get_x()
+            for ci, h_text in enumerate(header_texts):
+                x = x0 + ci * col_w
+                self.set_xy(x, y0)
+                self.rect(x, y0, col_w, row_h, "FD")
+                self.set_xy(x + 1, y0 + 0.5)
+                self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
+                                h_text, align="C")
+            self.set_xy(x0, y0 + row_h)
 
         # 데이터 행
         for row in rows:

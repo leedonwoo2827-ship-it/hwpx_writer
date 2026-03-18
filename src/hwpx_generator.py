@@ -404,10 +404,10 @@ class HWPXGenerator:
         )
 
     def _build_table_parapr_xml(self, pid) -> str:
-        """표 셀 전용 paragraph style — 글자 단위 줄바꿈 허용"""
+        """표 셀 전용 paragraph style — 글자 단위 줄바꿈 허용, 글꼴에 어울리는 줄 높이"""
         return (
             f'<hh:paraPr id="{pid}" tabPrIDRef="0" condense="0"'
-            f' fontLineHeight="0" snapToGrid="1"'
+            f' fontLineHeight="1" snapToGrid="1"'
             f' suppressLineNumbers="0" checked="0">'
             f'<hh:align horizontal="CENTER" vertical="BASELINE"/>'
             f'<hh:heading type="NONE" idRef="0" level="0"/>'
@@ -780,15 +780,17 @@ class HWPXGenerator:
 
         # 셀 내부 run 들
         cell_runs = ""
-        for seg_text, seg_color in segments:
-            if seg_color:
-                color_hex = self._resolve_color(seg_color)
-                table_style = self.style_config.get("table", {})
-                font = table_style.get("font", "Noto Serif KR")
-                size = table_style.get("size", 10)
-                cid = self._get_charpr_id(self._pt_to_height(size), color_hex, font)
+        table_style = self.style_config.get("table", {})
+        table_font = table_style.get("font", "Noto Serif KR")
+        table_size = table_style.get("size", 10)
+        for seg_text, seg_marker in segments:
+            is_bold = (seg_marker == "bold")
+            if seg_marker and seg_marker != "bold":
+                color_hex = self._resolve_color(seg_marker)
             else:
-                cid = charpr_id
+                color_hex = "#000000"
+            cid = self._get_charpr_id(
+                self._pt_to_height(table_size), color_hex, table_font, bold=is_bold)
             cell_runs += self._run_xml(seg_text, cid)
 
         inner_width = max(cell_width - 1020, 1000)
@@ -824,8 +826,13 @@ class HWPXGenerator:
         """표 XML 생성 (한글 오피스 호환 구조)"""
         headers = table_data.get("headers", [])
         rows = table_data.get("rows", [])
-        col_count = len(headers) if headers else 1
-        row_count = len(rows) + (1 if headers else 0)
+        col_count = len(headers) if headers else (len(rows[0]) if rows else 1)
+        # 빈 헤더 감지 (| | | 같은 경우)
+        has_visible_header = any(
+            (self._restore_cell_marker(h).strip() if isinstance(h, (dict, str)) else str(h).strip())
+            for h in headers
+        ) if headers else False
+        row_count = len(rows) + (1 if has_visible_header else 0)
 
         # 표 글자 스타일
         table_style = self.style_config.get("table", {})
@@ -838,9 +845,9 @@ class HWPXGenerator:
         total_width = 42520
         cell_width = total_width // col_count
 
-        # 헤더 행
+        # 헤더 행 (내용이 있는 경우만)
         header_row = ""
-        if headers:
+        if has_visible_header:
             for ci, h in enumerate(headers):
                 h_text = self._restore_cell_marker(h)
                 header_row += self._table_cell_xml(
@@ -851,7 +858,7 @@ class HWPXGenerator:
         data_rows = ""
         for ri, row in enumerate(rows):
             cells = ""
-            row_idx = ri + (1 if headers else 0)
+            row_idx = ri + (1 if has_visible_header else 0)
             for ci, cell in enumerate(row):
                 c_text = self._restore_cell_marker(cell)
                 cells += self._table_cell_xml(c_text, table_charpr, ci, row_idx, cell_width)

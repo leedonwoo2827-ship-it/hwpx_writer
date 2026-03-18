@@ -284,10 +284,11 @@ def _parse_table(lines: list, start: int) -> tuple:
     if not header_line.startswith("|"):
         return None, 0
 
-    raw_headers = [h.strip() for h in header_line.split("|")]
-    headers = [h for h in raw_headers if h]
+    # 선행/후행 | 를 제거하고 내부 셀만 분리 (빈 헤더 허용)
+    inner_header = header_line.strip().strip("|")
+    headers = [_strip_bold(h.strip()) for h in inner_header.split("|")]
 
-    if not headers:
+    if not headers or len(headers) < 1:
         return None, 0
 
     if start + 1 >= len(lines) or not _is_separator_line(lines[start + 1]):
@@ -313,6 +314,8 @@ def _parse_table(lines: list, start: int) -> tuple:
         for cell_text in cells_raw:
             if not cell_text:
                 cell_text = "-"
+            # **볼드** 마커를 {{bold:...}}로 변환
+            cell_text = _strip_bold(cell_text)
             color_match = re.match(r"^\{\{(red|green|blue|yellow|black):(.+)\}\}$", cell_text.strip())
             if color_match:
                 row.append({"text": color_match.group(2), "color": color_match.group(1)})
