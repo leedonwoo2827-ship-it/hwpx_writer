@@ -253,6 +253,18 @@ class ProposalPDF(FPDF):
                 max_h = h
         return max_h
 
+    @staticmethod
+    def _strip_markers(text: str) -> str:
+        """인라인 마커를 제거하고 순수 텍스트만 반환합니다."""
+        return _MARKER_RE.sub(lambda m: m.group(2), text)
+
+    def _detect_cell_color(self, text: str):
+        """셀 텍스트에서 첫 번째 색상 마커를 감지하여 RGB 튜플 반환."""
+        m = _MARKER_RE.search(text)
+        if m and m.group(1) != "bold":
+            return _hex_to_rgb(self.colors.get(m.group(1), "#000000"))
+        return None
+
     def render_table(self, table: dict):
         """테이블을 렌더링합니다."""
         s = self.styles.get("table", {})
@@ -260,80 +272,75 @@ class ProposalPDF(FPDF):
         headers = table.get("headers", [])
         rows = table.get("rows", [])
         title = table.get("title", "")
+        line_h = self._pt_to_mm(size) * self.line_spacing
 
+        # 캡션 (마커 파싱 포함)
         if title:
             self.ln(3)
+            cap_segments = _parse_segments(title, self.colors)
             self._set_gothic(11, bold=True)
-            self.cell(0, 5, title, align="C", new_x="LMARGIN", new_y="NEXT")
-            self.ln(1)
+            self.set_x(self.l_margin)
+            self._write_segments(cap_segments, self._gothic, 11)
+            self.ln(self._pt_to_mm(11) * self.line_spacing + 1)
 
         if not headers and not rows:
             return
 
-        # 컬럼 수: 헤더 또는 첫 번째 데이터 행 기준
+        # 컬럼 수 & 너비
         col_count = len(headers) if headers else (len(rows[0]) if rows else 1)
         usable_w = self.w - self.l_margin - self.r_margin
         col_w = usable_w / col_count
 
-        # 헤더가 있고, 내용이 비어있지 않은 경우에만 헤더 행 렌더링
-        header_texts = [_restore_cell_marker(h) for h in headers]
-        has_visible_header = any(h.strip() for h in header_texts)
+        # 모든 텍스트 → 마커 제거한 plain text로 통일
+        def to_plain_row(raw_cells):
+            return [self._strip_markers(_restore_cell_marker(c)) for c in raw_cells]
+
+        def to_color_row(raw_cells):
+            return [self._detect_cell_color(_restore_cell_marker(c)) for c in raw_cells]
+
+        # 헤더 처리
+        header_plains = to_plain_row(headers)
+        has_visible_header = any(h.strip() for h in header_plains)
 
         self.set_draw_color(102, 102, 102)
         if has_visible_header:
             self._set_gothic(size, bold=True)
             self.set_fill_color(240, 240, 240)
-            row_h = self._calc_row_height(header_texts, col_w, size)
+            row_h = self._calc_row_height(header_plains, col_w, size)
             y0 = self.get_y()
-            x0 = self.get_x()
-            for ci, h_text in enumerate(header_texts):
+            x0 = self.l_margin
+            for ci, h_text in enumerate(header_plains):
                 x = x0 + ci * col_w
-                self.set_xy(x, y0)
                 self.rect(x, y0, col_w, row_h, "FD")
                 self.set_xy(x + 1, y0 + 0.5)
-                self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
-                                h_text, align="C")
+                self._set_gothic(size, bold=True)
+                self.multi_cell(col_w - 2, line_h, h_text, align="C")
             self.set_xy(x0, y0 + row_h)
 
         # 데이터 행
         for row in rows:
-            cells_text = [_restore_cell_marker(cell) for cell in row]
-            # 색상 마커 제거 후 텍스트 길이로 높이 계산
-            plain_texts = []
-            for ct in cells_text:
-                plain = _MARKER_RE.sub(lambda m: m.group(2), ct)
-                plain_texts.append(plain)
+            plains = to_plain_row(row)
+            colors = to_color_row(row)
             self._set_gothic(size)
-            row_h = self._calc_row_height(plain_texts, col_w, size)
+            row_h = self._calc_row_height(plains, col_w, size)
 
-            # 페이지 넘김 체크
+            # 페이지 넘김
             if self.get_y() + row_h > self.h - self.b_margin:
                 self.add_page()
 
             y0 = self.get_y()
             x0 = self.l_margin
-            for ci, cell_text in enumerate(cells_text):
+            for ci, plain in enumerate(plains):
                 x = x0 + ci * col_w
-                # 셀 테두리
                 self.rect(x, y0, col_w, row_h)
-                # 셀 내용: 항상 multi_cell 사용 (overflow 방지)
-                segments = _parse_segments(cell_text, self.colors)
-                # 주요 색상 감지 (첫 번째 색상 마커를 셀 전체에 적용)
-                cell_color = None
-                for seg in segments:
-                    if seg["color"]:
-                        cell_color = seg["color"]
-                        break
-                if cell_color:
-                    self.set_text_color(*cell_color)
+                color = colors[ci] if ci < len(colors) else None
+                if color:
+                    self.set_text_color(*color)
                 else:
                     self.set_text_color(0, 0, 0)
-                # plain text로 multi_cell 렌더링 (셀 경계 존중)
-                plain = plain_texts[ci] if ci < len(plain_texts) else ""
                 self.set_xy(x + 1, y0 + 0.5)
                 self._set_gothic(size)
-                self.multi_cell(col_w - 2, self._pt_to_mm(size) * self.line_spacing,
-                                plain, align="L")
+                self.multi_cell(col_w - 2, line_h, plain, align="L")
                 self.set_text_color(0, 0, 0)
             self.set_xy(x0, y0 + row_h)
 
