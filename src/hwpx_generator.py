@@ -430,14 +430,14 @@ class HWPXGenerator:
         )
 
     def _get_table_parapr_id(self, is_header: bool = False) -> int:
-        """표 셀 전용 parapr ID (헤더=CENTER, 데이터=LEFT)"""
+        """표 셀 전용 parapr ID (헤더=CENTER, 데이터=JUSTIFY)"""
         cache_key = '_table_parapr_header' if is_header else '_table_parapr_data'
         if not hasattr(self, cache_key):
             pid = self._next_parapr_id
             self._next_parapr_id += 1
             if not hasattr(self, '_table_parapr_list'):
                 self._table_parapr_list = []
-            align = "CENTER" if is_header else "LEFT"
+            align = "CENTER" if is_header else "JUSTIFY"
             self._table_parapr_list.append((pid, align))
             setattr(self, cache_key, pid)
         return getattr(self, cache_key)
@@ -798,7 +798,7 @@ class HWPXGenerator:
             cell_runs += self._run_xml(seg_text, cid)
 
         inner_width = max(cell_width - 1020, 1000)
-        # 표 셀 전용 parapr (헤더=CENTER, 데이터=LEFT)
+        # 표 셀 전용 parapr (헤더=CENTER, 데이터=JUSTIFY)
         tbl_parapr = self._get_table_parapr_id(is_header=is_header)
         # 헤더 셀: borderFillIDRef=4 (회색 배경), 본문 셀: 3 (흰 배경)
         bf_id = "4" if is_header else "3"

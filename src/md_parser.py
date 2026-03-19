@@ -221,7 +221,7 @@ def parse_markdown_to_json(
             continue
 
         # ----------------------------------------------------------------
-        # 일반 단락 텍스트 → level 2 (기호 없음, 일반 본문)
+        # 일반 단락 텍스트 → 맨 앞 기호에 따라 level 자동 결정
         # ----------------------------------------------------------------
         if stripped and not stripped.startswith("#"):
             if current_section is None:
@@ -229,8 +229,12 @@ def parse_markdown_to_json(
                 content.append(current_section)
             clean = _strip_bold(stripped)
             color = _detect_marker_color(clean)
+
+            # 맨 앞 기호로 레벨 결정
+            level = _detect_level_by_symbol(clean)
+
             current_section["items"].append({
-                "level": 2,
+                "level": level,
                 "text": clean,
                 "color": color,
             })
@@ -267,6 +271,33 @@ def _detect_marker_color(text: str) -> str:
         if f"{{{{{color}:" in text:
             return color
     return "black"
+
+
+def _detect_level_by_symbol(text: str) -> int:
+    """텍스트 맨 앞 기호로 레벨을 자동 감지합니다.
+
+    기호 매핑:
+        □ → level 3
+        ○ → level 4
+        ― → level 5
+        ※ → level 6
+        기호 없음 → level 2 (일반 본문)
+    """
+    text = text.lstrip()
+    if not text:
+        return 2
+
+    first_char = text[0]
+    if first_char == '□':
+        return 3
+    elif first_char == '○':
+        return 4
+    elif first_char == '―':
+        return 5
+    elif first_char == '※':
+        return 6
+    else:
+        return 2  # 기호 없음 = 일반 본문
 
 
 def _is_separator_line(line: str) -> bool:
