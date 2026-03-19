@@ -75,6 +75,7 @@ def parse_markdown_to_json(
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
+            text = _strip_color_markers(text)
             current_section["items"].append(_item(6, text))
             i += 1
             continue
@@ -85,6 +86,7 @@ def parse_markdown_to_json(
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
+            text = _strip_color_markers(text)
             current_section["items"].append(_item(5, text))
             i += 1
             continue
@@ -95,6 +97,7 @@ def parse_markdown_to_json(
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
+            text = _strip_color_markers(text)
             current_section["items"].append(_item(4, text))
             i += 1
             continue
@@ -105,9 +108,10 @@ def parse_markdown_to_json(
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
+            text = _strip_color_markers(_strip_bold(text))
             current_section["items"].append({
                 "type": "subtitle",
-                "text": _strip_bold(text),
+                "text": text,
                 "subtitle_level": 2,
             })
             i += 1
@@ -119,9 +123,10 @@ def parse_markdown_to_json(
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
+            text = _strip_color_markers(_strip_bold(text))
             current_section["items"].append({
                 "type": "subtitle",
-                "text": _strip_bold(text),
+                "text": text,
                 "subtitle_level": 1,
             })
             i += 1
@@ -129,7 +134,7 @@ def parse_markdown_to_json(
 
         # # → 제목체 (첫 번째는 문서 제목, 이후는 섹션 제목)
         if stripped.startswith("# ") and not stripped.startswith("## "):
-            h1_text = _strip_bold(stripped[2:].strip())
+            h1_text = _strip_color_markers(_strip_bold(stripped[2:].strip()))
             if not metadata["title"]:
                 metadata["title"] = h1_text
                 metadata["include_title"] = True
@@ -192,6 +197,10 @@ def parse_markdown_to_json(
         if list_match:
             indent_len = len(line) - len(line.lstrip())
             text = list_match.group(3).strip()
+            # 색상 마커 감지 후 제거
+            color = _detect_marker_color(text)
+            text = _strip_color_markers(text)
+
             if indent_len == 0:
                 level = 3   # □
             elif indent_len <= 4:
@@ -202,7 +211,7 @@ def parse_markdown_to_json(
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            current_section["items"].append(_item(level, text))
+            current_section["items"].append(_item(level, text, color))
             i += 1
             continue
 
@@ -229,6 +238,8 @@ def parse_markdown_to_json(
                 content.append(current_section)
             clean = _strip_bold(stripped)
             color = _detect_marker_color(clean)
+            # 색상 마커 제거
+            clean = _strip_color_markers(clean)
 
             # 맨 앞 기호로 레벨 결정
             level = _detect_level_by_symbol(clean)
@@ -271,6 +282,15 @@ def _detect_marker_color(text: str) -> str:
         if f"{{{{{color}:" in text:
             return color
     return "black"
+
+
+def _strip_color_markers(text: str) -> str:
+    """텍스트에서 {{color:...}} 마커를 제거하고 순수 텍스트만 반환합니다.
+
+    예: "일반 {{green:초록색}} 텍스트" → "일반 초록색 텍스트"
+    """
+    # {{color:내용}} 패턴을 찾아서 내용만 남김
+    return re.sub(r'\{\{(?:red|green|blue|yellow|black):([^}]+)\}\}', r'\1', text)
 
 
 def _detect_level_by_symbol(text: str) -> int:
@@ -317,7 +337,7 @@ def _parse_table(lines: list, start: int) -> tuple:
 
     # 선행/후행 | 를 제거하고 내부 셀만 분리 (빈 헤더 허용)
     inner_header = header_line.strip().strip("|")
-    headers = [_strip_bold(h.strip()) for h in inner_header.split("|")]
+    headers = [_strip_color_markers(_strip_bold(h.strip())) for h in inner_header.split("|")]
 
     if not headers or len(headers) < 1:
         return None, 0
@@ -347,7 +367,9 @@ def _parse_table(lines: list, start: int) -> tuple:
                 cell_text = "-"
             # **볼드** 마커를 {{bold:...}}로 변환
             cell_text = _strip_bold(cell_text)
-            # 항상 문자열로 통일 (마커는 인라인 유지)
+            # 색상 마커 제거
+            cell_text = _strip_color_markers(cell_text)
+            # 항상 문자열로 통일
             row.append(cell_text)
         rows.append(row)
         i += 1
