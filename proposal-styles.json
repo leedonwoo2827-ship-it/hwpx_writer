@@ -101,6 +101,18 @@
       "font": "Noto Sans KR",
       "size": 9
     },
+    "table_header": {
+      "align": "center",
+      "leftMargin": 0,
+      "indent": 0,
+      "lineSpacing": 130
+    },
+    "table_data": {
+      "align": "left",
+      "leftMargin": 0,
+      "indent": 0,
+      "lineSpacing": 130
+    },
     "table_caption": {
       "font": "Noto Sans KR",
       "size": 10,

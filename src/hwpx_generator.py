@@ -403,7 +403,7 @@ class HWPXGenerator:
             f'</hh:paraPr>'
         )
 
-    def _build_table_parapr_xml(self, pid, align="CENTER") -> str:
+    def _build_table_parapr_xml(self, pid, align="LEFT", left_margin=0, indent=0, line_spacing=130) -> str:
         """표 셀 전용 paragraph style — 글자 단위 줄바꿈 허용, 글꼴에 어울리는 줄 높이"""
         return (
             f'<hh:paraPr id="{pid}" tabPrIDRef="0" condense="0"'
@@ -417,28 +417,36 @@ class HWPXGenerator:
             f' lineWrap="BREAK"/>'
             f'<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'
             f'<hh:margin>'
-            f'<hc:intent value="0" unit="HWPUNIT"/>'
-            f'<hc:left value="0" unit="HWPUNIT"/>'
+            f'<hc:intent value="{indent}" unit="HWPUNIT"/>'
+            f'<hc:left value="{left_margin}" unit="HWPUNIT"/>'
             f'<hc:right value="0" unit="HWPUNIT"/>'
             f'<hc:prev value="0" unit="HWPUNIT"/>'
             f'<hc:next value="0" unit="HWPUNIT"/>'
             f'</hh:margin>'
-            f'<hh:lineSpacing type="PERCENT" value="130" unit="HWPUNIT"/>'
+            f'<hh:lineSpacing type="PERCENT" value="{line_spacing}" unit="HWPUNIT"/>'
             f'<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0"'
             f' offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'
             f'</hh:paraPr>'
         )
 
     def _get_table_parapr_id(self, is_header: bool = False) -> int:
-        """표 셀 전용 parapr ID (헤더=CENTER, 데이터=JUSTIFY)"""
+        """표 셀 전용 parapr ID — JSON 스타일에서 설정 가져오기"""
         cache_key = '_table_parapr_header' if is_header else '_table_parapr_data'
         if not hasattr(self, cache_key):
             pid = self._next_parapr_id
             self._next_parapr_id += 1
             if not hasattr(self, '_table_parapr_list'):
                 self._table_parapr_list = []
-            align = "CENTER" if is_header else "JUSTIFY"
-            self._table_parapr_list.append((pid, align))
+
+            # JSON에서 스타일 가져오기
+            style_key = "table_header" if is_header else "table_data"
+            style = self.style_config.get(style_key, {})
+            align = style.get("align", "left").upper()
+            left_margin = self._pt_to_hwpunit(style.get("leftMargin", 0))
+            indent = self._pt_to_hwpunit(style.get("indent", 0))
+            line_spacing = style.get("lineSpacing", 130)
+
+            self._table_parapr_list.append((pid, align, left_margin, indent, line_spacing))
             setattr(self, cache_key, pid)
         return getattr(self, cache_key)
 
@@ -644,8 +652,8 @@ class HWPXGenerator:
         # 표 셀 전용 parapr 추가
         table_parapr_extra = 0
         if hasattr(self, '_table_parapr_list'):
-            for tpid, align in self._table_parapr_list:
-                paraprs += self._build_table_parapr_xml(tpid, align)
+            for tpid, align, left_margin, indent, line_spacing in self._table_parapr_list:
+                paraprs += self._build_table_parapr_xml(tpid, align, left_margin, indent, line_spacing)
                 table_parapr_extra += 1
         parapr_cnt = 1 + len(self._parapr_list) + table_parapr_extra
 
