@@ -98,14 +98,19 @@ Claude Desktop에서 자연어로 요청하면 됩니다.
 | `# 섹션` / `## 섹션` | level 1 | (없음) | 섹션 제목 | Noto Sans KR Bold, 16pt(12pt) |
 | `### 소항목` | section_subtitle | (없음) | 소항목 제목 | Noto Sans KR Bold, 15pt(11pt) |
 | `#### 항목` | level 2 | (없음) | 본문 항목 | Noto Serif KR, 15pt(10pt) |
-| 일반 단락 | level 3 | □ 자동 | 본문 | Noto Serif KR, 15pt(10pt) |
-| `##### 항목` | level 3 | □ 자동 | 본문 항목 | Noto Serif KR, 15pt(10pt) |
-| `###### 항목` | level 4 | □ 자동 | 세부 항목 | Noto Serif KR, 15pt(10pt) |
-| `- 항목` | level 3/4 | □ 자동 | 목록 | Noto Serif KR, 15pt(10pt) |
+| 일반 단락 | level 3 | ◻ 자동 | 본문 | Noto Serif KR, 15pt(10pt) |
+| `##### 항목` | level 3 | ◻ 자동 | 본문 항목 | Noto Serif KR, 15pt(10pt) |
+| `###### 항목` | level 4 | ○ 자동 | 세부 항목 | Noto Serif KR, 15pt(10pt) |
+| `- 항목` | level 3/4 | ◻ 자동 | 목록 | Noto Serif KR, 15pt(10pt) |
 | `\| 표 \|` | table | — | 표 | Noto Sans KR, 10pt(9pt) |
 
-> **기호 중복 방지**: 텍스트가 이미 □ ○ ― ※ 등 기호로 시작하면 스타일 기호가 자동 추가되지 않습니다.
-> 예: `#### □ 소제목` → □가 하나만 표시됩니다.
+> **기호 중복 방지**: 텍스트가 이미 ◻ ○ ― ※ 등 기호로 시작하면 스타일 기호가 자동 추가되지 않습니다.
+> 예: `#### ◻ 소제목` → ◻가 하나만 표시됩니다.
+
+> **⚠️ 중요: □ (U+25A1) 기호는 사용하지 마세요!**
+> - 한글 오피스 2020에서 □ (Black Square, U+25A1)는 특수 처리되어 내어쓰기(hangingIndent)가 무시됩니다.
+> - 대신 ◻ (White Medium Square, U+25FB) 또는 다른 네모 기호를 사용하세요.
+> - `proposal-styles.json`의 `level3.symbol` 값을 변경하여 다른 기호를 사용할 수 있습니다.
 
 ---
 

@@ -297,18 +297,21 @@ def _detect_level_by_symbol(text: str) -> int:
     """텍스트 맨 앞 기호로 레벨을 자동 감지합니다.
 
     기호 매핑:
-        □ → level 3
+        ◻ (White Medium Square, U+25FB) → level 3
         ○ → level 4
         ― → level 5
         ※ → level 6
         기호 없음 → level 2 (일반 본문)
+
+    ⚠️ 주의: □ (Black Square, U+25A1)는 사용하지 않습니다.
+    한글 오피스 2020에서 이 기호는 내어쓰기를 무시합니다.
     """
     text = text.lstrip()
     if not text:
         return 2
 
     first_char = text[0]
-    if first_char == '□':
+    if first_char == '◻':  # White Medium Square (U+25FB)
         return 3
     elif first_char == '○':
         return 4

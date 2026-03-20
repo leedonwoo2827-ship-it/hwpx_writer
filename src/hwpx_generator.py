@@ -806,10 +806,25 @@ class HWPXGenerator:
             cell_runs += self._run_xml(seg_text, cid)
 
         inner_width = max(cell_width - 1020, 1000)
-        # 표 셀 전용 parapr (헤더=CENTER, 데이터=JUSTIFY)
+        # 표 셀 전용 parapr (헤더=CENTER, 데이터=LEFT)
         tbl_parapr = self._get_table_parapr_id(is_header=is_header)
         # 헤더 셀: borderFillIDRef=4 (회색 배경), 본문 셀: 3 (흰 배경)
         bf_id = "4" if is_header else "3"
+
+        # 폰트 크기에 맞는 줄 높이 계산 (1pt = 100 HWPUNIT)
+        # 9pt 폰트 → 900 높이, 10pt → 1000, 11pt → 1100
+        font_height = int(table_size * 100)
+        # baseline은 높이의 약 85%, spacing은 높이의 약 60%
+        baseline = int(font_height * 0.85)
+        spacing = int(font_height * 0.6)
+
+        # lineSpacing 값 적용: 180% → vertsize = font_height * 1.8
+        style_key = "table_header" if is_header else "table_data"
+        line_spacing_pct = self.style_config.get(style_key, {}).get("lineSpacing", 180)
+        vert_size = int(font_height * line_spacing_pct / 100)
+
+        # 셀 높이는 vert_size + 여백(상하 141*2)
+        cell_height = vert_size + 282
 
         return (
             f'<hp:tc name="" header="0" hasMargin="0" protect="0"'
@@ -821,15 +836,15 @@ class HWPXGenerator:
             f' pageBreak="0" columnBreak="0" merged="0">'
             f'{cell_runs}'
             f'<hp:linesegarray>'
-            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1000"'
-            f' textheight="1000" baseline="850" spacing="600"'
+            f'<hp:lineseg textpos="0" vertpos="0" vertsize="{vert_size}"'
+            f' textheight="{font_height}" baseline="{baseline}" spacing="{spacing}"'
             f' horzpos="0" horzsize="{inner_width}" flags="393216"/>'
             f'</hp:linesegarray>'
             f'</hp:p>'
             f'</hp:subList>'
             f'<hp:cellAddr colAddr="{col_idx}" rowAddr="{row_idx}"/>'
             f'<hp:cellSpan colSpan="1" rowSpan="1"/>'
-            f'<hp:cellSz width="{cell_width}" height="282"/>'
+            f'<hp:cellSz width="{cell_width}" height="{cell_height}"/>'
             f'<hp:cellMargin left="510" right="510" top="141" bottom="141"/>'
             f'</hp:tc>'
         )
@@ -876,8 +891,27 @@ class HWPXGenerator:
                 cells += self._table_cell_xml(c_text, table_charpr, ci, row_idx, cell_width)
             data_rows += f'<hp:tr>{cells}</hp:tr>'
 
-        # 행당 약 1282 HWPUNIT (참조 파일 기준: 3행 = 3846)
-        table_h = 1282 * row_count
+        # 표 전체 높이: 각 행의 셀 높이 합계
+        # 셀 높이는 _table_cell_xml에서 계산한 값과 동일하게 계산
+        table_style = self.style_config.get("table", {})
+        table_size = table_style.get("size", 10)
+        font_height = int(table_size * 100)
+
+        # 헤더와 데이터 행의 높이 계산
+        header_line_spacing = self.style_config.get("table_header", {}).get("lineSpacing", 180)
+        data_line_spacing = self.style_config.get("table_data", {}).get("lineSpacing", 180)
+
+        header_vert_size = int(font_height * header_line_spacing / 100)
+        data_vert_size = int(font_height * data_line_spacing / 100)
+
+        header_cell_height = header_vert_size + 282
+        data_cell_height = data_vert_size + 282
+
+        # 표 전체 높이 = (헤더 있으면 헤더 높이) + (데이터 행 수 * 데이터 행 높이)
+        if has_visible_header:
+            table_h = header_cell_height + (data_cell_height * len(rows))
+        else:
+            table_h = data_cell_height * len(rows)
 
         return (
             f'<hp:tbl id="0" zOrder="0" numberingType="TABLE"'
@@ -1067,13 +1101,13 @@ class HWPXGenerator:
                         level_key = f"level{level}"
                         style = self.style_config.get(level_key, {})
 
-                        # 기호(symbol) 적용: JSON에 정의된 기호를 텍스트 앞에 붙인다
-                        # 단, 텍스트가 이미 기호 문자로 시작하면 중복 방지를 위해 생략
+                        # 기호(symbol) 적용: 텍스트가 이미 기호로 시작하지 않으면 추가
                         symbol = style.get("symbol", "")
-                        _SYMBOL_CHARS = {'□', '○', '●', '―', '※', '·', '◆', '◇', '■', '▶', '▷', '→', '-'}
-                        if symbol and text and text[0] in _SYMBOL_CHARS:
+                        if symbol and text and text.startswith(symbol):
+                            # 텍스트가 이미 해당 기호로 시작하면 그대로 유지
                             display_text = text
                         else:
+                            # 기호가 없거나 텍스트가 다른 문자로 시작하면 기호 추가
                             display_text = f"{symbol} {text}" if symbol else text
 
                         # ● 항목은 bullet 스타일 적용 (● 유지, 제목체)

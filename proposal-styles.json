@@ -47,14 +47,14 @@
       "leftMargin": 0
     },
     "level3": {
-      "symbol": "□",
+      "symbol": "◻",
       "font": "Noto Serif KR",
       "size": 10,
       "paragraphSpaceBefore": 5,
       "paragraphSpaceAfter": 3,
       "align": "justify",
       "leftMargin": 0,
-      "hangingIndent": 15.3
+      "hangingIndent": 15
     },
     "level4": {
       "symbol": "○",
@@ -105,13 +105,13 @@
       "align": "center",
       "leftMargin": 0,
       "indent": 0,
-      "lineSpacing": 130
+      "lineSpacing": 180
     },
     "table_data": {
       "align": "left",
-      "leftMargin": 0,
+      "leftMargin": 3,
       "indent": 0,
-      "lineSpacing": 130
+      "lineSpacing": 180
     },
     "table_caption": {
       "font": "Noto Sans KR",
