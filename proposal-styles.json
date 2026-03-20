@@ -22,7 +22,7 @@
       "font": "Noto Sans KR",
       "size": 13,
       "bold": true,
-      "paragraphSpaceBefore": 20,
+      "paragraphSpaceBefore": 10,
       "paragraphSpaceAfter": 6,
       "align": "justify",
       "leftMargin": 0
@@ -32,7 +32,7 @@
       "font": "Noto Sans KR",
       "size": 11,
       "bold": true,
-      "paragraphSpaceBefore": 15,
+      "paragraphSpaceBefore": 8,
       "paragraphSpaceAfter": 6,
       "align": "justify",
       "leftMargin": 0
@@ -41,7 +41,7 @@
       "symbol": "",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 5,
+      "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 3,
       "align": "justify",
       "leftMargin": 0
@@ -50,8 +50,8 @@
       "symbol": "◻",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 5,
-      "paragraphSpaceAfter": 3,
+      "paragraphSpaceBefore": 3,
+      "paragraphSpaceAfter": 2,
       "align": "justify",
       "leftMargin": 0,
       "hangingIndent": 15
@@ -60,7 +60,7 @@
       "symbol": "○",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 3,
+      "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
       "align": "justify",
       "leftMargin": 4,
@@ -91,7 +91,7 @@
       "font": "Noto Sans KR",
       "size": 10,
       "bold": true,
-      "paragraphSpaceBefore": 15,
+      "paragraphSpaceBefore": 8,
       "paragraphSpaceAfter": 5,
       "align": "justify",
       "leftMargin": 0,
@@ -105,20 +105,20 @@
       "align": "center",
       "leftMargin": 0,
       "indent": 0,
-      "lineSpacing": 180
+      "lineSpacing": 200
     },
     "table_data": {
       "align": "left",
-      "leftMargin": 3,
+      "leftMargin": 0,
       "indent": 0,
-      "lineSpacing": 180
+      "lineSpacing": 200
     },
     "table_caption": {
       "font": "Noto Sans KR",
       "size": 10,
       "bold": true,
       "align": "center",
-      "paragraphSpaceBefore": 10,
+      "paragraphSpaceBefore": 6,
       "paragraphSpaceAfter": 3
     },
     "image_caption": {

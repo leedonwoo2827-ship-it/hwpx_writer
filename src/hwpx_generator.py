@@ -151,8 +151,8 @@ class HWPXGenerator:
 
     @staticmethod
     def _pt_to_hwpunit(pt: float) -> int:
-        """포인트를 HWPUNIT로 변환 (1pt = 200 HWPUNIT, 한글 오피스 문단 여백 기준)"""
-        return int(pt * 200)
+        """포인트를 HWPUNIT로 변환 (1pt = 50 HWPUNIT)"""
+        return int(pt * 50)
 
     # ------------------------------------------------------------------
     # 이미지 관리
@@ -792,9 +792,9 @@ class HWPXGenerator:
 
         # 셀 내부 run 들
         cell_runs = ""
-        table_style = self.style_config.get("table", {})
-        table_font = table_style.get("font", "Noto Serif KR")
-        table_size = table_style.get("size", 10)
+        # 표는 항상 Noto Sans KR 9pt 강제 적용
+        table_font = "Noto Sans KR"
+        table_size = 9
         for seg_text, seg_marker in segments:
             is_bold = (seg_marker == "bold")
             if seg_marker and seg_marker != "bold":

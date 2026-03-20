@@ -5,14 +5,14 @@
 마크다운 텍스트를 hwpx_generator.py가 소비하는 JSON 구조로 변환합니다.
 
 헤딩 매핑 (# 수 = 레벨):
-  #      → 제목체 (섹션 구분, 첫 번째는 문서 제목)
-  ##     → 중간 제목 (subtitle level 1) — section_subtitle보다 한 단계 큰 제목체
-  ###    → 소제목 (subtitle level 2) — 제목체 스타일 적용
-  ####   → level 4 (○)
-  #####  → level 5 (―)
-  ###### → level 6 (※)
+  #      → level 1 (모든 제목체, Noto Sans KR Bold)
+  ##     → level 2 (기호 없는 본문, Noto Serif KR)
+  ###    → level 3 (◻ 본문 항목, Noto Serif KR)
+  ####   → level 4 (○ 세부 항목, Noto Serif KR)
+  #####  → level 5 (― 보충 설명, Noto Serif KR)
+  ###### → level 6 (※ 참고, Noto Serif KR)
 
-본문 기호 계층: (없음) → □ → ○ → ― → ※
+기호 자동 감지는 더 이상 사용하지 않음 (헤딩 레벨로 기호 자동 적용)
 
 색상 마커 (인라인):
   {{red:텍스트}}, {{green:텍스트}}, {{blue:텍스트}},
@@ -102,45 +102,39 @@ def parse_markdown_to_json(
             i += 1
             continue
 
-        # ### → 소제목 (subtitle level 2) — 제목체 스타일 적용
+        # ### → level 3 (◻ 본문 항목)
         if stripped.startswith("### "):
             text = stripped[4:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            text = _strip_color_markers(_strip_bold(text))
-            current_section["items"].append({
-                "type": "subtitle",
-                "text": text,
-                "subtitle_level": 2,
-            })
+            text = _strip_color_markers(text)
+            current_section["items"].append(_item(3, text))
             i += 1
             continue
 
-        # ## → 중간 제목 (subtitle level 1) — 제목체 스타일 (###보다 한 단계 큼)
+        # ## → level 2 (기호 없는 본문)
         if stripped.startswith("## "):
             text = stripped[3:].strip()
             if current_section is None:
                 current_section = _new_section("")
                 content.append(current_section)
-            text = _strip_color_markers(_strip_bold(text))
-            current_section["items"].append({
-                "type": "subtitle",
-                "text": text,
-                "subtitle_level": 1,
-            })
+            text = _strip_color_markers(text)
+            current_section["items"].append(_item(2, text))
             i += 1
             continue
 
-        # # → 제목체 (첫 번째는 문서 제목, 이후는 섹션 제목)
+        # # → level 1 (제목체)
         if stripped.startswith("# ") and not stripped.startswith("## "):
             h1_text = _strip_color_markers(_strip_bold(stripped[2:].strip()))
             if not metadata["title"]:
                 metadata["title"] = h1_text
                 metadata["include_title"] = True
             else:
-                current_section = _new_section(h1_text)
-                content.append(current_section)
+                if current_section is None:
+                    current_section = _new_section("")
+                    content.append(current_section)
+                current_section["items"].append(_item(1, h1_text))
             i += 1
             continue
 
@@ -184,7 +178,10 @@ def parse_markdown_to_json(
                             and items[-1].get("level") == 2
                             and len(items[-1].get("text", "")) < 60):
                         caption_item = items.pop()
-                        table["title"] = caption_item["text"]
+                        caption_text = caption_item["text"]
+                        # 캡션에서 기호 제거 (◻, ○, ―, -, ※)
+                        caption_text = caption_text.lstrip('◻○―-※ 	')
+                        table["title"] = caption_text
                     current_section["items"].append(table)
                     i += consumed
                     continue
@@ -299,7 +296,7 @@ def _detect_level_by_symbol(text: str) -> int:
     기호 매핑:
         ◻ (White Medium Square, U+25FB) → level 3
         ○ → level 4
-        ― → level 5
+        ― 또는 - → level 5
         ※ → level 6
         기호 없음 → level 2 (일반 본문)
 
@@ -312,13 +309,13 @@ def _detect_level_by_symbol(text: str) -> int:
 
     first_char = text[0]
     if first_char == '◻':  # White Medium Square (U+25FB)
-        return 3
-    elif first_char == '○':
         return 4
-    elif first_char == '―':
+    elif first_char == '○':
         return 5
-    elif first_char == '※':
+    elif first_char == '―' or first_char == '-':
         return 6
+    elif first_char == '※':
+        return 7
     else:
         return 2  # 기호 없음 = 일반 본문
 
