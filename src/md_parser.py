@@ -7,7 +7,7 @@
 헤딩 매핑 (# 수 = 레벨):
   #      → level 1 (모든 제목체, Noto Sans KR Bold)
   ##     → level 2 (기호 없는 본문, Noto Serif KR)
-  ###    → level 3 (◻ 본문 항목, Noto Serif KR)
+  ###    → level 3 (□ 본문 항목, Noto Serif KR)
   ####   → level 4 (○ 세부 항목, Noto Serif KR)
   #####  → level 5 (― 보충 설명, Noto Serif KR)
   ###### → level 6 (※ 참고, Noto Serif KR)
@@ -102,7 +102,7 @@ def parse_markdown_to_json(
             i += 1
             continue
 
-        # ### → level 3 (◻ 본문 항목)
+        # ### → level 3 (□ 본문 항목)
         if stripped.startswith("### "):
             text = stripped[4:].strip()
             if current_section is None:
@@ -179,8 +179,8 @@ def parse_markdown_to_json(
                             and len(items[-1].get("text", "")) < 60):
                         caption_item = items.pop()
                         caption_text = caption_item["text"]
-                        # 캡션에서 기호 제거 (◻, ○, ―, -, ※)
-                        caption_text = caption_text.lstrip('◻○―-※ 	')
+                        # 캡션에서 기호 제거 (□, ○, ―, -, ※)
+                        caption_text = caption_text.lstrip('□○―-※ 	')
                         table["title"] = caption_text
                     current_section["items"].append(table)
                     i += consumed
@@ -294,28 +294,25 @@ def _detect_level_by_symbol(text: str) -> int:
     """텍스트 맨 앞 기호로 레벨을 자동 감지합니다.
 
     기호 매핑:
-        ◻ (White Medium Square, U+25FB) → level 3
+        □ (U+25A1) → level 3
         ○ → level 4
         ― 또는 - → level 5
         ※ → level 6
         기호 없음 → level 2 (일반 본문)
-
-    ⚠️ 주의: □ (Black Square, U+25A1)는 사용하지 않습니다.
-    한글 오피스 2020에서 이 기호는 내어쓰기를 무시합니다.
     """
     text = text.lstrip()
     if not text:
         return 2
 
     first_char = text[0]
-    if first_char == '◻':  # White Medium Square (U+25FB)
-        return 4
+    if first_char == '□':  # U+25A1
+        return 3
     elif first_char == '○':
-        return 5
+        return 4
     elif first_char == '―' or first_char == '-':
-        return 6
+        return 5
     elif first_char == '※':
-        return 7
+        return 6
     else:
         return 2  # 기호 없음 = 일반 본문
 

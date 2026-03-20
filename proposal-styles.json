@@ -47,11 +47,11 @@
       "leftMargin": 0
     },
     "level3": {
-      "symbol": "◻",
+      "symbol": "□",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 3,
-      "paragraphSpaceAfter": 2,
+      "paragraphSpaceBefore": 2.5,
+      "paragraphSpaceAfter": 1.5,
       "align": "justify",
       "leftMargin": 0,
       "hangingIndent": 15
@@ -60,8 +60,8 @@
       "symbol": "○",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 2,
-      "paragraphSpaceAfter": 2,
+      "paragraphSpaceBefore": 2.5,
+      "paragraphSpaceAfter": 1.5,
       "align": "justify",
       "leftMargin": 4,
       "hangingIndent": 15.3
@@ -72,7 +72,7 @@
       "size": 10,
       "paragraphSpaceBefore": 2,
       "paragraphSpaceAfter": 2,
-      "align": "justify",
+      "align": "left",
       "leftMargin": 8,
       "hangingIndent": 15.3
     },
@@ -80,9 +80,9 @@
       "symbol": "※",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 2,
-      "paragraphSpaceAfter": 2,
-      "align": "justify",
+      "paragraphSpaceBefore": 1,
+      "paragraphSpaceAfter": 1,
+      "align": "left",
       "leftMargin": 12,
       "hangingIndent": 15.3
     },

@@ -109,7 +109,7 @@ A사와 3년 장기 계약 체결 (계약금액: 50억 원)
 |---|---|---|---|---|---|
 | `#` 제목 | 제목 | level 1 | Noto Sans KR Bold 13pt | 없음 | leftMargin=0 |
 | `##` 본문 | 본문 | level 2 | Noto Serif KR 10pt | 없음 | leftMargin=0 |
-| `###` 본문 항목 | 본문 항목 | level 3 | Noto Serif KR 10pt | ◻ | leftMargin=0, hangingIndent=15pt |
+| `###` 본문 항목 | 본문 항목 | level 3 | Noto Serif KR 10pt | □ | leftMargin=0, hangingIndent=15pt |
 | `####` 세부 항목 | 세부 항목 | level 4 | Noto Serif KR 10pt | ○ | leftMargin=4pt, hangingIndent=15.3pt |
 | `#####` 보충 설명 | 보충 설명 | level 5 | Noto Serif KR 10pt | ― | leftMargin=8pt, hangingIndent=15.3pt |
 | `######` 참고 | 참고 | level 6 | Noto Serif KR 10pt | ※ | leftMargin=12pt, hangingIndent=15.3pt |
@@ -136,7 +136,7 @@ user_info, order_history, product_catalog
 
 **HWPX 렌더링 결과**:
 ```
-◻ 데이터 수집 방법
+□ 데이터 수집 방법
   SQL 데이터베이스에서 원시 데이터를 추출합니다.
 
   ○ 수집 대상 테이블
@@ -152,7 +152,7 @@ user_info, order_history, product_catalog
 #### ❌ 잘못된 사용법
 
 ```markdown
-◻ 데이터 수집 방법  ← 기호를 직접 입력하지 마세요!
+□ 데이터 수집 방법  ← 기호를 직접 입력하지 마세요!
 ```
 
 이렇게 하면 정렬이 틀어지고 기호가 중복될 수 있습니다.
@@ -165,11 +165,7 @@ user_info, order_history, product_catalog
 - **헤더**: 중앙 정렬, 굵게
 - **데이터**: 왼쪽 정렬
 
-> **⚠️ 주의: □ (U+25A1) 기호는 사용하지 마세요!**
->
-> - 한글 오피스 2020에서 □ (Black Square, U+25A1)는 특수 처리되어 내어쓰기(hangingIndent)가 무시됩니다.
-> - 대신 ◻ (White Medium Square, U+25FB) 또는 다른 네모 기호를 사용하세요.
-> - `proposal-styles.json`의 `level3.symbol` 값을 변경하여 다른 기호를 사용할 수 있습니다.
+> Level 3 기호는 □ (U+25A1)을 사용합니다. `proposal-styles.json`의 `level3.symbol` 값으로 변경 가능합니다.
 
 ---
 
@@ -191,7 +187,7 @@ user_info, order_history, product_catalog
       "leftMargin": 0
     },
     "level3": {
-      "symbol": "◻",
+      "symbol": "□",
       "font": "Noto Serif KR",
       "size": 10,
       "paragraphSpaceBefore": 3,
@@ -238,7 +234,7 @@ user_info, order_history, product_catalog
 - `proposal-styles.json`에 지정된 폰트가 PC에 설치되어 있어야 합니다.
 - 설치되지 않은 폰트는 한글 오피스가 기본 폰트로 대체합니다.
 
-### Q: 기호(◻, ○, ―, ※)가 정렬이 틀어져요.
+### Q: 기호(□, ○, ―, ※)가 정렬이 틀어져요.
 - **기호를 직접 입력하지 마세요!** 마크다운 헤딩 레벨(`###`, `####`, `#####`, `######`)을 사용하면 자동으로 기호가 추가됩니다.
 - 직접 입력한 기호는 제거하고 헤딩 레벨로 변경하세요.
 
@@ -272,7 +268,7 @@ hwpx_writer/
 
 ### 2026-03-20: 새로운 6단계 레벨 체계 도입
 - 마크다운 헤딩 `#`~`######` 6단계를 HWPX 스타일 레벨 1~6과 1:1 매핑
-- 기호(◻, ○, ―, ※) 자동 적용 (직접 입력 금지)
+- 기호(□, ○, ―, ※) 자동 적용 (직접 입력 금지)
 - 표 줄 간격 200%로 증가 (텍스트 겹침 방지)
 - 본문 폰트 Noto Serif KR (명조체) 통일
 - HWPUNIT 변환 수정 (1pt = 50 HWPUNIT)

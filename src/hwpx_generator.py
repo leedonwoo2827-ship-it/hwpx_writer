@@ -845,7 +845,7 @@ class HWPXGenerator:
             f'<hp:cellAddr colAddr="{col_idx}" rowAddr="{row_idx}"/>'
             f'<hp:cellSpan colSpan="1" rowSpan="1"/>'
             f'<hp:cellSz width="{cell_width}" height="{cell_height}"/>'
-            f'<hp:cellMargin left="510" right="510" top="141" bottom="141"/>'
+            f'<hp:cellMargin left="170" right="170" top="141" bottom="141"/>'
             f'</hp:tc>'
         )
 
@@ -926,7 +926,7 @@ class HWPXGenerator:
             f' horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT"'
             f' vertOffset="0" horzOffset="0"/>'
             f'<hp:outMargin left="283" right="283" top="283" bottom="283"/>'
-            f'<hp:inMargin left="510" right="510" top="141" bottom="141"/>'
+            f'<hp:inMargin left="170" right="170" top="141" bottom="141"/>'
             f'{header_row}{data_rows}'
             f'</hp:tbl>'
         )
