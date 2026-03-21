@@ -443,7 +443,7 @@ class HWPXGenerator:
             style = self.style_config.get(style_key, {})
             align = style.get("align", "left").upper()
             left_margin = self._pt_to_hwpunit(style.get("leftMargin", 0))
-            indent = self._pt_to_hwpunit(style.get("indent", 0))
+            indent = 0  # 표 셀은 항상 "보통" (첫줄 들여쓰기/내어쓰기 없음)
             line_spacing = style.get("lineSpacing", 130)
 
             self._table_parapr_list.append((pid, align, left_margin, indent, line_spacing))
@@ -757,8 +757,9 @@ class HWPXGenerator:
                         hanging_indent_pt: float = 0) -> str:
         """마커 색상을 지원하는 텍스트 paragraph 생성"""
         height = self._pt_to_height(font_size_pt)
-        # 왼쪽 여백과 내어쓰기는 별도 값 (한글 오피스: left=왼쪽, intent=-내어쓰기)
-        actual_left = self._pt_to_hwpunit(left_margin_pt)
+        # 한글 오피스 내어쓰기: left = leftMargin + hangingIndent (둘째 줄 위치)
+        # intent = -hangingIndent (첫째 줄은 기호 시작점)
+        actual_left = self._pt_to_hwpunit(left_margin_pt + hanging_indent_pt)
         indent_val = -self._pt_to_hwpunit(hanging_indent_pt) if hanging_indent_pt else 0
         parapr_id = self._get_parapr_id(
             actual_left,

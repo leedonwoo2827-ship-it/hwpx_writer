@@ -52,7 +52,7 @@
       "size": 10,
       "paragraphSpaceBefore": 2.5,
       "paragraphSpaceAfter": 1.5,
-      "align": "justify",
+      "align": "left",
       "leftMargin": 0,
       "hangingIndent": 15
     },
@@ -62,7 +62,7 @@
       "size": 10,
       "paragraphSpaceBefore": 2.5,
       "paragraphSpaceAfter": 1.5,
-      "align": "justify",
+      "align": "left",
       "leftMargin": 4,
       "hangingIndent": 15.3
     },
@@ -130,7 +130,7 @@
       "paragraphSpaceAfter": 10
     }
   },
-  "lineSpacing": 160,
+  "lineSpacing": 150,
   "colors": {
     "red": "#dc2626",
     "green": "#16a34a",
