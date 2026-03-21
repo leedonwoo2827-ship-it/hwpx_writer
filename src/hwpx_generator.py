@@ -1119,6 +1119,12 @@ class HWPXGenerator:
                         else:
                             use_style = style
 
+                        # 기호 레벨(3~6)은 LEFT 강제, 그 외는 JSON 값 사용
+                        if level >= 3 and use_style.get("symbol"):
+                            forced_align = "LEFT"
+                        else:
+                            forced_align = use_style.get("align", "justify").upper()
+
                         body_paragraphs += self._text_paragraph(
                             display_text,
                             level,
@@ -1127,7 +1133,7 @@ class HWPXGenerator:
                             use_style.get("leftMargin", 0),
                             use_style.get("paragraphSpaceBefore", 0),
                             use_style.get("paragraphSpaceAfter", 3),
-                            use_style.get("align", "justify").upper(),
+                            forced_align,
                             use_style.get("hangingIndent", 0),
                         )
                         _log(f"[Added] Level {level}: {text[:50]}...")
