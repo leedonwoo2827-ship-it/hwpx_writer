@@ -77,6 +77,42 @@ class HWPXGenerator:
         self._images = []        # [(bin_id, abs_path, zip_name, fmt)]
         self._next_bin_id = 1
 
+        # 기호 레벨(3~6) 전용 스타일 사전 등록
+        # 한글 오피스가 styleIDRef의 paraPr를 우선 적용하는 문제 대응
+        self._level_style_map = {}   # level -> style_id (22~25)
+        self._level_parapr_map = {}  # level -> parapr_id
+        self._pre_register_level_styles()
+
+    def _pre_register_level_styles(self):
+        """기호 레벨(3~6) 전용 paraPr + style 사전 등록.
+
+        한글 오피스는 paragraph의 paraPrIDRef보다 styleIDRef가 가리키는
+        paraPr의 정렬 속성을 우선하는 경우가 있다. 이를 해결하기 위해
+        각 기호 레벨에 LEFT 정렬 paraPr을 가진 전용 스타일을 만든다.
+        """
+        for level in range(3, 7):
+            level_key = f"level{level}"
+            style = self.style_config.get(level_key, {})
+
+            left_margin_pt = style.get("leftMargin", 0)
+            hanging_indent_pt = style.get("hangingIndent", 0)
+            space_before_pt = style.get("paragraphSpaceBefore", 0)
+            space_after_pt = style.get("paragraphSpaceAfter", 0)
+
+            actual_left = self._pt_to_hwpunit(left_margin_pt + hanging_indent_pt)
+            indent_val = -self._pt_to_hwpunit(hanging_indent_pt) if hanging_indent_pt else 0
+
+            parapr_id = self._get_parapr_id(
+                actual_left,
+                self._pt_to_hwpunit(space_before_pt),
+                self._pt_to_hwpunit(space_after_pt),
+                "LEFT",
+                indent_val,
+            )
+            style_id = 22 + (level - 3)  # 22, 23, 24, 25
+            self._level_parapr_map[level] = parapr_id
+            self._level_style_map[level] = style_id
+
     # ------------------------------------------------------------------
     # 폰트 관리
     # ------------------------------------------------------------------
@@ -583,9 +619,24 @@ class HWPXGenerator:
         )
 
     def _build_styles_xml(self) -> str:
-        """styles XML — 한글 오피스 필수 요소 (기본 스타일 22개)"""
+        """styles XML — 기본 22개 + 기호 레벨 전용 스타일"""
+        # 기호 레벨(3~6) 전용 스타일 추가
+        level_styles = ""
+        level_names = {3: "항목3", 4: "항목4", 5: "항목5", 6: "항목6"}
+        level_eng = {3: "Item3", 4: "Item4", 5: "Item5", 6: "Item6"}
+        for level in range(3, 7):
+            sid = self._level_style_map.get(level)
+            pid = self._level_parapr_map.get(level)
+            if sid is not None and pid is not None:
+                level_styles += (
+                    f'<hh:style id="{sid}" type="PARA" name="{level_names[level]}"'
+                    f' engName="{level_eng[level]}"'
+                    f' paraPrIDRef="{pid}" charPrIDRef="0"'
+                    f' nextStyleIDRef="{sid}" langID="1042" lockForm="0"/>'
+                )
+        style_cnt = 22 + len(self._level_style_map)
         return (
-            '<hh:styles itemCnt="22">'
+            f'<hh:styles itemCnt="{style_cnt}">'
             '<hh:style id="0" type="PARA" name="바탕글" engName="Normal"'
             ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="0" langID="1042" lockForm="0"/>'
             '<hh:style id="1" type="PARA" name="본문" engName="Body"'
@@ -630,6 +681,7 @@ class HWPXGenerator:
             ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="20" langID="1042" lockForm="0"/>'
             '<hh:style id="21" type="PARA" name="캡션" engName="Caption"'
             ' paraPrIDRef="0" charPrIDRef="0" nextStyleIDRef="21" langID="1042" lockForm="0"/>'
+            f'{level_styles}'
             '</hh:styles>'
         )
 
@@ -741,10 +793,11 @@ class HWPXGenerator:
         )
 
     def _paragraph_xml(self, runs_xml: str, parapr_id: int = 0,
-                       page_break: str = "0", p_id: str = "0") -> str:
+                       page_break: str = "0", p_id: str = "0",
+                       style_id: int = 0) -> str:
         return (
             f'<hp:p id="{p_id}" paraPrIDRef="{parapr_id}"'
-            f' styleIDRef="0" pageBreak="{page_break}"'
+            f' styleIDRef="{style_id}" pageBreak="{page_break}"'
             f' columnBreak="0" merged="0">'
             f'{runs_xml}'
             f'</hp:p>'
@@ -754,7 +807,8 @@ class HWPXGenerator:
                         font_size_pt: float, left_margin_pt: float = 0,
                         space_before_pt: float = 0, space_after_pt: float = 0,
                         align: str = "JUSTIFY",
-                        hanging_indent_pt: float = 0) -> str:
+                        hanging_indent_pt: float = 0,
+                        style_id: int = 0) -> str:
         """마커 색상을 지원하는 텍스트 paragraph 생성"""
         height = self._pt_to_height(font_size_pt)
         # 한글 오피스 내어쓰기: left = leftMargin + hangingIndent (둘째 줄 위치)
@@ -780,7 +834,7 @@ class HWPXGenerator:
             cid = self._get_charpr_id(height, color_hex, font_name, bold=is_bold)
             runs += self._run_xml(seg_text, cid)
 
-        return self._paragraph_xml(runs, parapr_id)
+        return self._paragraph_xml(runs, parapr_id, style_id=style_id)
 
     # ------------------------------------------------------------------
     # 표 XML 빌더
@@ -1119,11 +1173,13 @@ class HWPXGenerator:
                         else:
                             use_style = style
 
-                        # 기호 레벨(3~6)은 LEFT 강제, 그 외는 JSON 값 사용
+                        # 기호 레벨(3~6)은 LEFT 강제 + 전용 스타일 사용
                         if level >= 3 and use_style.get("symbol"):
                             forced_align = "LEFT"
+                            level_style_id = self._level_style_map.get(level, 0)
                         else:
                             forced_align = use_style.get("align", "justify").upper()
+                            level_style_id = 0
 
                         body_paragraphs += self._text_paragraph(
                             display_text,
@@ -1135,6 +1191,7 @@ class HWPXGenerator:
                             use_style.get("paragraphSpaceAfter", 3),
                             forced_align,
                             use_style.get("hangingIndent", 0),
+                            level_style_id,
                         )
                         _log(f"[Added] Level {level}: {text[:50]}...")
 

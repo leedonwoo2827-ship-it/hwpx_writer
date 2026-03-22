@@ -44,47 +44,47 @@
       "paragraphSpaceBefore": 3,
       "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 0
+      "leftMargin": 4
     },
     "level3": {
       "symbol": "□",
-      "font": "Noto Serif KR",
+      "font": "Noto Sans KR",
       "size": 10,
-      "paragraphSpaceBefore": 2,
-      "paragraphSpaceAfter": 1,
+      "paragraphSpaceBefore": 3,
+      "paragraphSpaceAfter": 3,
       "align": "left",
-      "leftMargin": 0,
-      "hangingIndent": 12
+      "leftMargin": -56,
+      "hangingIndent": 60
     },
     "level4": {
       "symbol": "○",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 2,
-      "paragraphSpaceAfter": 1,
+      "paragraphSpaceBefore": 3,
+      "paragraphSpaceAfter": 3,
       "align": "left",
-      "leftMargin": 4,
-      "hangingIndent": 12
+      "leftMargin": -52,
+      "hangingIndent": 60
     },
     "level5": {
       "symbol": "―",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 2,
-      "paragraphSpaceAfter": 1,
+      "paragraphSpaceBefore": 3,
+      "paragraphSpaceAfter": 3,
       "align": "left",
-      "leftMargin": 8,
-      "hangingIndent": 12
+      "leftMargin": -48,
+      "hangingIndent": 60
     },
     "level6": {
       "symbol": "※",
       "font": "Noto Serif KR",
       "size": 10,
-      "paragraphSpaceBefore": 2,
-      "paragraphSpaceAfter": 1,
+      "paragraphSpaceBefore": 3,
+      "paragraphSpaceAfter": 3,
       "align": "left",
-      "leftMargin": 12,
-      "hangingIndent": 12
+      "leftMargin": -44,
+      "hangingIndent": 60
     },
     "bullet": {
       "symbol": "",
@@ -105,13 +105,13 @@
       "align": "center",
       "leftMargin": 0,
       "indent": 0,
-      "lineSpacing": 200
+      "lineSpacing": 100
     },
     "table_data": {
       "align": "center",
       "leftMargin": 0,
       "indent": 0,
-      "lineSpacing": 200
+      "lineSpacing": 100
     },
     "table_caption": {
       "font": "Noto Sans KR",
@@ -130,7 +130,7 @@
       "paragraphSpaceAfter": 10
     }
   },
-  "lineSpacing": 150,
+  "lineSpacing": 170,
   "colors": {
     "red": "#dc2626",
     "green": "#16a34a",

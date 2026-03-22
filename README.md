@@ -105,14 +105,14 @@ A사와 3년 장기 계약 체결 (계약금액: 50억 원)
 
 **마크다운 헤딩 `#`~`######` 6단계를 모두 사용하여 HWPX 스타일 레벨 1~6과 1:1 매핑합니다.**
 
-| 마크다운 작성 방법 | HWPX 렌더링 | 스타일 레벨 | 폰트 | 기호 | 여백 |
+| 마크다운 | 레벨 | 폰트 | 기호 | 한글 왼쪽 | 한글 내어쓰기 |
 |---|---|---|---|---|---|
-| `#` 제목 | 제목 | level 1 | Noto Sans KR Bold 13pt | 없음 | leftMargin=0 |
-| `##` 본문 | 본문 | level 2 | Noto Serif KR 10pt | 없음 | leftMargin=0 |
-| `###` 본문 항목 | 본문 항목 | level 3 | Noto Serif KR 10pt | □ | leftMargin=0, hangingIndent=15pt |
-| `####` 세부 항목 | 세부 항목 | level 4 | Noto Serif KR 10pt | ○ | leftMargin=4pt, hangingIndent=15.3pt |
-| `#####` 보충 설명 | 보충 설명 | level 5 | Noto Serif KR 10pt | ― | leftMargin=8pt, hangingIndent=15.3pt |
-| `######` 참고 | 참고 | level 6 | Noto Serif KR 10pt | ※ | leftMargin=12pt, hangingIndent=15.3pt |
+| `#` 제목 | level 1 | Noto Sans KR Bold 13pt | 없음 | 0pt | — |
+| `##` 본문 | level 2 | Noto Serif KR 10pt | 없음 | 14.0pt | — |
+| `###` 항목 | level 3 | Noto Sans KR 10pt | □ | 14.0pt | 15.0pt |
+| `####` 세부 | level 4 | Noto Serif KR 10pt | ○ | 14.3pt | 15.0pt |
+| `#####` 보충 | level 5 | Noto Serif KR 10pt | ― | 14.5pt | 15.0pt |
+| `######` 참고 | level 6 | Noto Serif KR 10pt | ※ | 14.8pt | 15.0pt |
 
 ### ⚠️ 중요: 마크다운 헤딩 사용 원칙
 
@@ -161,9 +161,9 @@ user_info, order_history, product_catalog
 
 표는 자동으로 다음 스타일이 적용됩니다:
 - **폰트**: Noto Sans KR 9pt (고딕체)
-- **줄 간격**: 200% (텍스트 겹침 방지)
+- **줄 간격**: 100%
 - **헤더**: 중앙 정렬, 굵게
-- **데이터**: 왼쪽 정렬
+- **데이터**: 중앙 정렬
 
 > Level 3 기호는 □ (U+25A1)을 사용합니다. `proposal-styles.json`의 `level3.symbol` 값으로 변경 가능합니다.
 
@@ -172,36 +172,76 @@ user_info, order_history, product_catalog
 ## 4. 스타일 커스터마이징
 
 `proposal-styles.json` 파일을 수정하면 폰트, 크기, 여백 등을 변경할 수 있습니다.
+MCP 서버가 매 요청마다 이 파일을 다시 읽으므로 **서버 재시작 없이 즉시 반영**됩니다.
+
+### 문단 여백 속성
+
+| 속성 | 설명 | 한글 오피스 대응 | 비율 |
+|------|------|----------------|------|
+| `paragraphSpaceBefore` | 문단 위 간격 | 문단 모양 → 문단 위 | JSON × 0.25 = 한글 pt |
+| `paragraphSpaceAfter` | 문단 아래 간격 | 문단 모양 → 문단 아래 | JSON × 0.25 = 한글 pt |
+| `leftMargin` | 왼쪽 여백 기준값 | 문단 모양 → 왼쪽 | JSON × 0.25 = 한글 pt |
+| `hangingIndent` | 내어쓰기 크기 (기호 레벨 전용) | 문단 모양 → 내어쓰기 | JSON × 0.25 = 한글 pt |
+
+> **변환 비율**: JSON 값 × 0.25 = 한글 오피스에 표시되는 pt 값
+> 예: `"hangingIndent": 60` → 한글에서 15.0pt 내어쓰기
+
+### leftMargin과 hangingIndent의 관계
+
+기호 레벨(3~6)은 `leftMargin`과 `hangingIndent`를 조합하여 내어쓰기를 구현합니다.
+
+```
+한글 오피스 표시:
+  왼쪽     = (leftMargin + hangingIndent) × 0.25 pt
+  내어쓰기 = hangingIndent × 0.25 pt
+  첫줄 시작 = 왼쪽 - 내어쓰기
+```
+
+**현재 설정 예시** (level3 기준):
+
+```
+leftMargin = -4, hangingIndent = 60
+
+→ 한글 왼쪽     = (-4 + 60) × 0.25 = 14.0 pt
+→ 한글 내어쓰기 = 60 × 0.25 = 15.0 pt
+→ 첫줄 시작     = 14.0 - 15.0 = -1.0 → 0 pt (페이지 여백에 붙음)
+```
+
+이 구조에서 기호(□, ○ 등)는 페이지 왼쪽 여백에서 시작하고,
+줄바꿈된 텍스트는 본문(level2)과 같은 위치에 정렬됩니다.
+
+### 전체 줄간격
+
+```json
+"lineSpacing": 170       // 본문 줄간격 → 한글 170%
+"table_data": {
+  "lineSpacing": 100     // 표 줄간격 → 한글 100% (lineSpacing은 % 그대로)
+}
+```
+
+### 설정 예시
 
 ```json
 {
   "styles": {
-    "level1": {
-      "symbol": "",
-      "font": "Noto Sans KR",
-      "size": 13,
-      "bold": true,
-      "paragraphSpaceBefore": 10,
-      "paragraphSpaceAfter": 6,
-      "align": "justify",
-      "leftMargin": 0
-    },
-    "level3": {
-      "symbol": "□",
+    "level2": {
       "font": "Noto Serif KR",
       "size": 10,
       "paragraphSpaceBefore": 3,
-      "paragraphSpaceAfter": 2,
+      "paragraphSpaceAfter": 3,
       "align": "justify",
-      "leftMargin": 0,
-      "hangingIndent": 15
+      "leftMargin": 56
     },
-    "table_header": {
-      "lineSpacing": 200,
+    "level3": {
+      "symbol": "□",
       "font": "Noto Sans KR",
-      "size": 9
+      "size": 10,
+      "align": "left",
+      "leftMargin": -4,
+      "hangingIndent": 60
     }
   },
+  "lineSpacing": 170,
   "colors": {
     "red": "#dc2626",
     "green": "#16a34a"
@@ -266,10 +306,16 @@ hwpx_writer/
 
 ## 7. 변경 이력
 
+### 2026-03-22: 기호 레벨 정렬 완전 수정
+- 기호 레벨(3~6) 전용 스타일(항목3~6) 도입으로 LEFT 정렬 문제 해결
+- leftMargin + hangingIndent 조합으로 내어쓰기 구현
+- 본문(level2) 왼쪽여백 추가로 기호 줄바꿈 텍스트와 정렬 일치
+- 표 줄간격 200% → 100%로 축소
+- 본문 줄간격 150% → 170%로 조정
+
 ### 2026-03-20: 새로운 6단계 레벨 체계 도입
 - 마크다운 헤딩 `#`~`######` 6단계를 HWPX 스타일 레벨 1~6과 1:1 매핑
 - 기호(□, ○, ―, ※) 자동 적용 (직접 입력 금지)
-- 표 줄 간격 200%로 증가 (텍스트 겹침 방지)
 - 본문 폰트 Noto Serif KR (명조체) 통일
 - HWPUNIT 변환 수정 (1pt = 50 HWPUNIT)
 
