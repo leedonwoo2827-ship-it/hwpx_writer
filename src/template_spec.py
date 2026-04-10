@@ -385,4 +385,17 @@ class TemplateSpec:
             )
             spec.styles[key] = ts
 
+        # Extract symbols from legacy styles into markdown headings
+        level_symbols = {}
+        for key, sd in style_config.items():
+            if key.startswith("level") and "symbol" in sd:
+                try:
+                    lvl = int(key.replace("level", ""))
+                    level_symbols[lvl] = sd["symbol"]
+                except ValueError:
+                    pass
+        for heading in spec.markdown.headings:
+            if heading.level in level_symbols:
+                heading.symbol = level_symbols[heading.level]
+
         return spec

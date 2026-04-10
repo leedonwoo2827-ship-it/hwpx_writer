@@ -13,7 +13,6 @@ XML을 문자열로 직접 생성한다.
   - 모든 Contents/*.xml에 전체 네임스페이스 선언 필수
 """
 
-import json
 import os
 import re
 import struct
@@ -21,6 +20,8 @@ import sys
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
+
+from template_spec import TemplateSpec, TextStyle
 
 
 def _log(msg: str) -> None:
@@ -49,17 +50,16 @@ _ALL_NS = (
 
 
 class HWPXGenerator:
-    def __init__(self, base_dir: str = None, styles_path: str = "proposal-styles.json"):
+    def __init__(self, base_dir: str = None, styles_path: str = "proposal-styles.json",
+                 spec: TemplateSpec = None):
         self.base_dir = Path(base_dir) if base_dir else Path.cwd()
 
-        sp = Path(styles_path)
-        self.styles_path = sp if sp.is_absolute() else self.base_dir / sp
-
-        with open(self.styles_path, "r", encoding="utf-8") as f:
-            styles_data = json.load(f)
-            self.style_config = styles_data["styles"]
-            self.colors = styles_data.get("colors", {})
-            self.line_spacing = styles_data.get("lineSpacing", 160)
+        if spec is not None:
+            self.spec = spec
+        else:
+            sp = Path(styles_path)
+            sp = sp if sp.is_absolute() else self.base_dir / sp
+            self.spec = TemplateSpec.from_legacy_styles(str(sp))
 
         # CharPr / ParaPr ID 카운터 (0번은 기본용으로 예약)
         self._charpr_list = []   # (id, height, textColor, fontId)
@@ -83,6 +83,13 @@ class HWPXGenerator:
         self._level_parapr_map = {}  # level -> parapr_id
         self._pre_register_level_styles()
 
+    def _get_symbol(self, level: int) -> str:
+        """레벨에 해당하는 기호 반환 (markdown headings에서 조회)"""
+        for h in self.spec.markdown.headings:
+            if h.level == level:
+                return h.symbol
+        return ""
+
     def _pre_register_level_styles(self):
         """기호 레벨(3~6) 전용 paraPr + style 사전 등록.
 
@@ -92,12 +99,12 @@ class HWPXGenerator:
         """
         for level in range(3, 7):
             level_key = f"level{level}"
-            style = self.style_config.get(level_key, {})
+            style = self.spec.get_style(level_key)
 
-            left_margin_pt = style.get("leftMargin", 0)
-            hanging_indent_pt = style.get("hangingIndent", 0)
-            space_before_pt = style.get("paragraphSpaceBefore", 0)
-            space_after_pt = style.get("paragraphSpaceAfter", 0)
+            left_margin_pt = style.left_indent_pt
+            hanging_indent_pt = style.hanging_indent_pt
+            space_before_pt = style.space_before_pt
+            space_after_pt = style.space_after_pt
 
             actual_left = self._pt_to_hwpunit(left_margin_pt + hanging_indent_pt)
             indent_val = -self._pt_to_hwpunit(hanging_indent_pt) if hanging_indent_pt else 0
@@ -135,17 +142,16 @@ class HWPXGenerator:
     def _collect_fonts_from_styles(self):
         """스타일에서 사용하는 폰트를 모두 등록"""
         # 기본 폰트: 스타일에서 본문(level2)과 제목(level1) 폰트를 가져옴
-        body_font = self.style_config.get("level2", {}).get("font", "Noto Serif KR")
-        heading_font = self.style_config.get("level1", {}).get("font", "Noto Sans KR")
+        body_font = self.spec.get_style("level2").font
+        heading_font = self.spec.get_style("level1").font
         default_fonts = [body_font, heading_font]
         for f in default_fonts:
             self._register_font(f)
 
         # 스타일에서 사용하는 폰트
-        for key, style in self.style_config.items():
-            font = style.get("font")
-            if font:
-                self._register_font(font)
+        for key, style in self.spec.styles.items():
+            if style.font:
+                self._register_font(style.font)
 
     # ------------------------------------------------------------------
     # CharPr 관리
@@ -266,12 +272,13 @@ class HWPXGenerator:
         return ""
 
     def _image_paragraph_xml(self, bin_id: int, width_px: int, height_px: int,
-                              max_width_hwpunit: int = 47600) -> str:
+                              max_width_hwpunit: int = 0) -> str:
         """이미지를 담는 paragraph XML 생성 (한글 오피스 호환 구조).
         실제 한글 오피스가 생성하는 HWPX 구조를 그대로 복제.
         """
-        # px → HWPUNIT (75 HWPUNIT/px — 한글 오피스 기준)
-        PX_TO_HU = 75
+        if not max_width_hwpunit:
+            max_width_hwpunit = self.spec.image_max_width
+        PX_TO_HU = self.spec.image.px_to_hwpunit
         org_w = int(width_px * PX_TO_HU)
         org_h = int(height_px * PX_TO_HU)
 
@@ -339,7 +346,7 @@ class HWPXGenerator:
     # 색상
     # ------------------------------------------------------------------
     def _resolve_color(self, name: str) -> str:
-        return self.colors.get(name.lower(), "#000000").upper()
+        return self.spec.resolve_color(name)
 
     # ------------------------------------------------------------------
     # 마커 파싱 {{red:텍스트}}
@@ -433,7 +440,7 @@ class HWPXGenerator:
             f'<hc:prev value="{space_before}" unit="HWPUNIT"/>'
             f'<hc:next value="{space_after}" unit="HWPUNIT"/>'
             f'</hh:margin>'
-            f'<hh:lineSpacing type="PERCENT" value="{self.line_spacing}" unit="HWPUNIT"/>'
+            f'<hh:lineSpacing type="PERCENT" value="{self.spec.line_spacing}" unit="HWPUNIT"/>'
             f'<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0"'
             f' offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>'
             f'</hh:paraPr>'
@@ -474,13 +481,13 @@ class HWPXGenerator:
             if not hasattr(self, '_table_parapr_list'):
                 self._table_parapr_list = []
 
-            # JSON에서 스타일 가져오기
+            # TemplateSpec에서 스타일 가져오기
             style_key = "table_header" if is_header else "table_data"
-            style = self.style_config.get(style_key, {})
-            align = style.get("align", "left").upper()
-            left_margin = self._pt_to_hwpunit(style.get("leftMargin", 0))
+            ts = self.spec.get_style(style_key)
+            align = ts.align.upper() if ts.align else "LEFT"
+            left_margin = self._pt_to_hwpunit(ts.left_indent_pt)
             indent = 0  # 표 셀은 항상 "보통" (첫줄 들여쓰기/내어쓰기 없음)
-            line_spacing = style.get("lineSpacing", 130)
+            line_spacing = ts.line_spacing
 
             self._table_parapr_list.append((pid, align, left_margin, indent, line_spacing))
             setattr(self, cache_key, pid)
@@ -738,10 +745,12 @@ class HWPXGenerator:
         )
 
     def _build_secpr_xml(self) -> str:
-        """페이지 설정 (secPr) — A4, 상하좌우 여백 (한글 오피스 호환)"""
+        """페이지 설정 (secPr) — 여백 (한글 오피스 호환)"""
+        pg = self.spec.page
+        fn = self.spec.footnote
         return (
-            '<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134"'
-            ' tabStop="8000" outlineShapeIDRef="1" memoShapeIDRef="0"'
+            f'<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="{pg.column_spacing}"'
+            f' tabStop="{pg.tab_stop}" outlineShapeIDRef="1" memoShapeIDRef="0"'
             ' textVerticalWidthHead="0" masterPageCnt="0">'
             '<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>'
             '<hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>'
@@ -749,24 +758,24 @@ class HWPXGenerator:
             ' hideFirstMasterPage="0" border="SHOW_ALL" fill="SHOW_ALL"'
             ' hideFirstPageNum="0" hideFirstEmptyLine="0" showLineNumber="0"/>'
             '<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>'
-            '<hp:pagePr landscape="WIDELY" width="59528" height="84186" gutterType="LEFT_ONLY">'
-            '<hp:margin header="4252" footer="4252" gutter="0"'
-            ' left="8504" right="8504" top="5668" bottom="4252"/>'
-            '</hp:pagePr>'
-            '<hp:footNotePr>'
-            '<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
-            '<hp:noteLine length="-1" type="SOLID" width="0.12 mm" color="#000000"/>'
-            '<hp:noteSpacing betweenNotes="283" belowLine="567" aboveLine="850"/>'
-            '<hp:numbering type="CONTINUOUS" newNum="1"/>'
-            '<hp:placement place="EACH_COLUMN" beneathText="0"/>'
-            '</hp:footNotePr>'
-            '<hp:endNotePr>'
-            '<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
-            '<hp:noteLine length="14692344" type="SOLID" width="0.12 mm" color="#000000"/>'
-            '<hp:noteSpacing betweenNotes="0" belowLine="567" aboveLine="850"/>'
-            '<hp:numbering type="CONTINUOUS" newNum="1"/>'
-            '<hp:placement place="END_OF_DOCUMENT" beneathText="0"/>'
-            '</hp:endNotePr>'
+            f'<hp:pagePr landscape="WIDELY" width="{pg.width}" height="{pg.height}" gutterType="LEFT_ONLY">'
+            f'<hp:margin header="{pg.margin_header}" footer="{pg.margin_footer}" gutter="{pg.gutter}"'
+            f' left="{pg.margin_left}" right="{pg.margin_right}" top="{pg.margin_top}" bottom="{pg.margin_bottom}"/>'
+            f'</hp:pagePr>'
+            f'<hp:footNotePr>'
+            f'<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
+            f'<hp:noteLine length="-1" type="SOLID" width="0.12 mm" color="#000000"/>'
+            f'<hp:noteSpacing betweenNotes="{fn.fn_between}" belowLine="{fn.fn_below_line}" aboveLine="{fn.fn_above_line}"/>'
+            f'<hp:numbering type="CONTINUOUS" newNum="1"/>'
+            f'<hp:placement place="EACH_COLUMN" beneathText="0"/>'
+            f'</hp:footNotePr>'
+            f'<hp:endNotePr>'
+            f'<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
+            f'<hp:noteLine length="{fn.en_line_length}" type="SOLID" width="0.12 mm" color="#000000"/>'
+            f'<hp:noteSpacing betweenNotes="{fn.en_between}" belowLine="{fn.en_below_line}" aboveLine="{fn.en_above_line}"/>'
+            f'<hp:numbering type="CONTINUOUS" newNum="1"/>'
+            f'<hp:placement place="END_OF_DOCUMENT" beneathText="0"/>'
+            f'</hp:endNotePr>'
             '<hp:pageBorderFill type="BOTH" borderFillIDRef="1" textBorder="PAPER"'
             ' headerInside="0" footerInside="0" fillArea="PAPER">'
             '<hp:offset left="1417" right="1417" top="1417" bottom="1417"/>'
@@ -847,9 +856,10 @@ class HWPXGenerator:
 
         # 셀 내부 run 들
         cell_runs = ""
-        # 표는 항상 Noto Sans KR 9pt 강제 적용
-        table_font = "Noto Sans KR"
-        table_size = 9
+        # 표 스타일에서 폰트/크기 조회
+        _ts = self.spec.get_style("table")
+        table_font = _ts.font
+        table_size = _ts.size_pt
         for seg_text, seg_marker in segments:
             is_bold = (seg_marker == "bold")
             if seg_marker and seg_marker != "bold":
@@ -860,7 +870,7 @@ class HWPXGenerator:
                 self._pt_to_height(table_size), color_hex, table_font, bold=is_bold)
             cell_runs += self._run_xml(seg_text, cid)
 
-        inner_width = max(cell_width - 1020, 1000)
+        inner_width = max(cell_width - self.spec.table.cell_padding_h, 1000)
         # 표 셀 전용 parapr (헤더=CENTER, 데이터=LEFT)
         tbl_parapr = self._get_table_parapr_id(is_header=is_header)
         # 헤더 셀: borderFillIDRef=4 (회색 배경), 본문 셀: 3 (흰 배경)
@@ -875,11 +885,11 @@ class HWPXGenerator:
 
         # lineSpacing 값 적용: 180% → vertsize = font_height * 1.8
         style_key = "table_header" if is_header else "table_data"
-        line_spacing_pct = self.style_config.get(style_key, {}).get("lineSpacing", 180)
+        line_spacing_pct = self.spec.get_style(style_key).line_spacing
         vert_size = int(font_height * line_spacing_pct / 100)
 
-        # 셀 높이는 vert_size + 여백(상하 141*2)
-        cell_height = vert_size + 282
+        # 셀 높이는 vert_size + 여백(상하 패딩)
+        cell_height = vert_size + self.spec.table.cell_padding_v
 
         return (
             f'<hp:tc name="" header="0" hasMargin="0" protect="0"'
@@ -900,7 +910,10 @@ class HWPXGenerator:
             f'<hp:cellAddr colAddr="{col_idx}" rowAddr="{row_idx}"/>'
             f'<hp:cellSpan colSpan="1" rowSpan="1"/>'
             f'<hp:cellSz width="{cell_width}" height="{cell_height}"/>'
-            f'<hp:cellMargin left="170" right="170" top="141" bottom="141"/>'
+            f'<hp:cellMargin left="{self.spec.table.cell_margin_left}"'
+            f' right="{self.spec.table.cell_margin_right}"'
+            f' top="{self.spec.table.cell_margin_top}"'
+            f' bottom="{self.spec.table.cell_margin_bottom}"/>'
             f'</hp:tc>'
         )
 
@@ -917,14 +930,14 @@ class HWPXGenerator:
         row_count = len(rows) + (1 if has_visible_header else 0)
 
         # 표 글자 스타일
-        table_style = self.style_config.get("table", {})
-        table_font = table_style.get("font", "Noto Serif KR")
-        table_size = table_style.get("size", 10)
+        _tbl_ts = self.spec.get_style("table")
+        table_font = _tbl_ts.font
+        table_size = _tbl_ts.size_pt
         table_height = self._pt_to_height(table_size)
         table_charpr = self._get_charpr_id(table_height, "#000000", table_font)
 
-        # 본문 폭: 페이지폭(59528) - 좌여백(8504) - 우여백(8504) = 42520
-        total_width = 42520
+        # 본문 폭 = 페이지폭 - 좌여백 - 우여백
+        total_width = self.spec.page.body_width
         cell_width = total_width // col_count
 
         # 헤더 행 (내용이 있는 경우만)
@@ -948,19 +961,18 @@ class HWPXGenerator:
 
         # 표 전체 높이: 각 행의 셀 높이 합계
         # 셀 높이는 _table_cell_xml에서 계산한 값과 동일하게 계산
-        table_style = self.style_config.get("table", {})
-        table_size = table_style.get("size", 10)
-        font_height = int(table_size * 100)
+        _tbl_ts2 = self.spec.get_style("table")
+        font_height = int(_tbl_ts2.size_pt * 100)
 
         # 헤더와 데이터 행의 높이 계산
-        header_line_spacing = self.style_config.get("table_header", {}).get("lineSpacing", 180)
-        data_line_spacing = self.style_config.get("table_data", {}).get("lineSpacing", 180)
+        header_line_spacing = self.spec.get_style("table_header").line_spacing
+        data_line_spacing = self.spec.get_style("table_data").line_spacing
 
         header_vert_size = int(font_height * header_line_spacing / 100)
         data_vert_size = int(font_height * data_line_spacing / 100)
 
-        header_cell_height = header_vert_size + 282
-        data_cell_height = data_vert_size + 282
+        header_cell_height = header_vert_size + self.spec.table.cell_padding_v
+        data_cell_height = data_vert_size + self.spec.table.cell_padding_v
 
         # 표 전체 높이 = (헤더 있으면 헤더 높이) + (데이터 행 수 * 데이터 행 높이)
         if has_visible_header:
@@ -980,8 +992,14 @@ class HWPXGenerator:
             f' allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA"'
             f' horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT"'
             f' vertOffset="0" horzOffset="0"/>'
-            f'<hp:outMargin left="283" right="283" top="283" bottom="283"/>'
-            f'<hp:inMargin left="170" right="170" top="141" bottom="141"/>'
+            f'<hp:outMargin left="{self.spec.table.outer_margin}"'
+            f' right="{self.spec.table.outer_margin}"'
+            f' top="{self.spec.table.outer_margin}"'
+            f' bottom="{self.spec.table.outer_margin}"/>'
+            f'<hp:inMargin left="{self.spec.table.cell_margin_left}"'
+            f' right="{self.spec.table.cell_margin_right}"'
+            f' top="{self.spec.table.cell_margin_top}"'
+            f' bottom="{self.spec.table.cell_margin_bottom}"/>'
             f'{header_row}{data_rows}'
             f'</hp:tbl>'
         )
@@ -992,14 +1010,14 @@ class HWPXGenerator:
         caption = table_data.get("title", "")
         if caption:
             # 표 제목: 돋움체 가운데 정렬 (마커 파싱 포함)
-            cap_style = self.style_config.get("table_caption", {})
-            cap_font = cap_style.get("font", "Noto Sans KR")
-            cap_size = cap_style.get("size", 11)
+            _cap_ts = self.spec.get_style("table_caption")
+            cap_font = _cap_ts.font
+            cap_size = _cap_ts.size_pt
             cap_height = self._pt_to_height(cap_size)
             cap_parapr = self._get_parapr_id(
                 0,
-                self._pt_to_hwpunit(cap_style.get("paragraphSpaceBefore", 10)),
-                self._pt_to_hwpunit(cap_style.get("paragraphSpaceAfter", 3)),
+                self._pt_to_hwpunit(_cap_ts.space_before_pt),
+                self._pt_to_hwpunit(_cap_ts.space_after_pt),
                 "CENTER",
             )
             segments = self._parse_markers(caption)
@@ -1059,15 +1077,15 @@ class HWPXGenerator:
         )
 
         if include_title and title:
-            title_style = self.style_config.get("title", {})
-            title_font = title_style.get("font", "Noto Serif KR")
-            title_size = title_style.get("size", 25)
-            title_align = title_style.get("align", "center").upper()
-            if title_align == "CENTER":
-                title_align = "CENTER"
+            _title_ts = self.spec.get_style("title")
+            title_font = _title_ts.font
+            title_size = _title_ts.size_pt
+            title_align = _title_ts.align.upper()
             title_height = self._pt_to_height(title_size)
             title_charpr = self._get_charpr_id(title_height, "#000000", title_font)
-            title_parapr = self._get_parapr_id(0, 0, self._pt_to_hwpunit(10), title_align)
+            title_parapr = self._get_parapr_id(
+                0, self._pt_to_hwpunit(_title_ts.space_before_pt),
+                self._pt_to_hwpunit(_title_ts.space_after_pt), title_align)
 
             runs = self._run_xml(title, title_charpr)
             # 첫 문단에 secPr + colPr 포함
@@ -1097,16 +1115,14 @@ class HWPXGenerator:
                 include_section_titles = metadata.get("include_section_titles", False)
                 section_title = item.get("title")
                 if include_section_titles and section_title:
-                    sec_style = self.style_config.get("level1", {})
-                    sec_font = sec_style.get("font", "Noto Serif KR")
-                    sec_size = sec_style.get("size", 18)
-                    sec_height = self._pt_to_height(sec_size)
-                    sec_charpr = self._get_charpr_id(sec_height, "#000000", sec_font)
+                    _sec_ts = self.spec.get_style("level1")
+                    sec_height = self._pt_to_height(_sec_ts.size_pt)
+                    sec_charpr = self._get_charpr_id(sec_height, "#000000", _sec_ts.font)
                     sec_parapr = self._get_parapr_id(
-                        self._pt_to_hwpunit(sec_style.get("leftMargin", 0)),
-                        self._pt_to_hwpunit(sec_style.get("paragraphSpaceBefore", 25)),
-                        self._pt_to_hwpunit(sec_style.get("paragraphSpaceAfter", 8)),
-                        "JUSTIFY",
+                        self._pt_to_hwpunit(_sec_ts.left_indent_pt),
+                        self._pt_to_hwpunit(_sec_ts.space_before_pt),
+                        self._pt_to_hwpunit(_sec_ts.space_after_pt),
+                        _sec_ts.align.upper(),
                     )
                     runs = self._run_xml(section_title, sec_charpr)
                     body_paragraphs += self._paragraph_xml(runs, sec_parapr)
@@ -1130,22 +1146,17 @@ class HWPXGenerator:
                     elif sub_type == "subtitle":
                         # subtitle_level: 1=## (큰 제목), 2=### (소제목)
                         subtitle_level = sub.get("subtitle_level", 2)
-                        if subtitle_level == 1:
-                            sub_style = self.style_config.get("level1", {})
-                        else:
-                            sub_style = self.style_config.get("section_subtitle", {})
-                        sub_font = sub_style.get("font", "Noto Sans KR")
-                        sub_size = sub_style.get("size", 15)
-                        sub_bold = sub_style.get("bold", True)
+                        _sub_key = "level1" if subtitle_level == 1 else "section_subtitle"
+                        _sub_ts = self.spec.get_style(_sub_key)
                         sub_charpr = self._get_charpr_id(
-                            self._pt_to_height(sub_size), "#000000", sub_font,
-                            bold=sub_bold
+                            self._pt_to_height(_sub_ts.size_pt), "#000000", _sub_ts.font,
+                            bold=_sub_ts.bold
                         )
                         sub_parapr = self._get_parapr_id(
-                            self._pt_to_hwpunit(sub_style.get("leftMargin", 0)),
-                            self._pt_to_hwpunit(sub_style.get("paragraphSpaceBefore", 15)),
-                            self._pt_to_hwpunit(sub_style.get("paragraphSpaceAfter", 6)),
-                            "JUSTIFY",
+                            self._pt_to_hwpunit(_sub_ts.left_indent_pt),
+                            self._pt_to_hwpunit(_sub_ts.space_before_pt),
+                            self._pt_to_hwpunit(_sub_ts.space_after_pt),
+                            _sub_ts.align.upper(),
                         )
                         runs = self._run_xml(sub.get("text", ""), sub_charpr)
                         body_paragraphs += self._paragraph_xml(runs, sub_parapr)
@@ -1154,43 +1165,39 @@ class HWPXGenerator:
                         level = sub.get("level", 1)
                         text = sub.get("text", "")
                         level_key = f"level{level}"
-                        style = self.style_config.get(level_key, {})
+                        _lvl_ts = self.spec.get_style(level_key)
 
                         # 기호(symbol) 적용: 텍스트가 이미 기호로 시작하지 않으면 추가
-                        symbol = style.get("symbol", "")
+                        symbol = self._get_symbol(level)
                         if symbol and text and text.startswith(symbol):
-                            # 텍스트가 이미 해당 기호로 시작하면 그대로 유지
                             display_text = text
                         else:
-                            # 기호가 없거나 텍스트가 다른 문자로 시작하면 기호 추가
                             display_text = f"{symbol} {text}" if symbol else text
 
                         # ● 항목은 bullet 스타일 적용 (● 유지, 제목체)
                         if text and text.startswith('●'):
-                            bullet_style = self.style_config.get("bullet", {})
-                            use_style = bullet_style
-                            # display_text는 dedup에서 이미 ● 포함 상태 유지
+                            use_ts = self.spec.get_style("bullet")
                         else:
-                            use_style = style
+                            use_ts = _lvl_ts
 
                         # 기호 레벨(3~6)은 LEFT 강제 + 전용 스타일 사용
-                        if level >= 3 and use_style.get("symbol"):
+                        if level >= 3 and symbol:
                             forced_align = "LEFT"
                             level_style_id = self._level_style_map.get(level, 0)
                         else:
-                            forced_align = use_style.get("align", "justify").upper()
+                            forced_align = use_ts.align.upper()
                             level_style_id = 0
 
                         body_paragraphs += self._text_paragraph(
                             display_text,
                             level,
-                            use_style.get("font", "Noto Serif KR"),
-                            use_style.get("size", 11),
-                            use_style.get("leftMargin", 0),
-                            use_style.get("paragraphSpaceBefore", 0),
-                            use_style.get("paragraphSpaceAfter", 3),
+                            use_ts.font,
+                            use_ts.size_pt,
+                            use_ts.left_indent_pt,
+                            use_ts.space_before_pt,
+                            use_ts.space_after_pt,
                             forced_align,
-                            use_style.get("hangingIndent", 0),
+                            use_ts.hanging_indent_pt,
                             level_style_id,
                         )
                         _log(f"[Added] Level {level}: {text[:50]}...")
@@ -1209,14 +1216,14 @@ class HWPXGenerator:
                     # 이미지 캡션
                     caption = item.get("caption", "")
                     if caption:
-                        cap_style = self.style_config.get("image_caption", {})
-                        cap_font = cap_style.get("font", "Noto Sans KR")
-                        cap_size = cap_style.get("size", 11)
+                        _icap_ts = self.spec.get_style("image_caption")
+                        cap_font = _icap_ts.font
+                        cap_size = _icap_ts.size_pt
                         cap_height = self._pt_to_height(cap_size)
                         cap_parapr = self._get_parapr_id(
                             0,
-                            self._pt_to_hwpunit(cap_style.get("paragraphSpaceBefore", 3)),
-                            self._pt_to_hwpunit(cap_style.get("paragraphSpaceAfter", 10)),
+                            self._pt_to_hwpunit(_icap_ts.space_before_pt),
+                            self._pt_to_hwpunit(_icap_ts.space_after_pt),
                             "CENTER",
                         )
                         segments = self._parse_markers(caption)
@@ -1230,14 +1237,16 @@ class HWPXGenerator:
                     _log(f"[Warning] Image not found: {img_path} (resolved: {resolved})")
 
         # 마지막 빈 문단 (한글 오피스 호환 — linesegarray 포함)
+        _pm = self.spec.paragraph
         body_paragraphs += (
             '<hp:p id="0" paraPrIDRef="0" styleIDRef="0"'
             ' pageBreak="0" columnBreak="0" merged="0">'
             '<hp:run charPrIDRef="0"/>'
             '<hp:linesegarray>'
-            '<hp:lineseg textpos="0" vertpos="0" vertsize="1000"'
-            ' textheight="1000" baseline="850" spacing="600"'
-            ' horzpos="0" horzsize="42520" flags="393216"/>'
+            f'<hp:lineseg textpos="0" vertpos="0" vertsize="{_pm.default_textheight}"'
+            f' textheight="{_pm.default_textheight}" baseline="{_pm.default_baseline}"'
+            f' spacing="{_pm.default_spacing}"'
+            f' horzpos="0" horzsize="{self.spec.page.body_width}" flags="393216"/>'
             '</hp:linesegarray>'
             '</hp:p>'
         )
